@@ -8,9 +8,13 @@ use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
-    public function manageUsers()
+    public function manageUsers(Request $request)
     {
-        $users = User::where('role', 'user')->get();
+        $query = User::query();
+        if ($request->has('role') && in_array($request->role, ['admin', 'user'])) {
+            $query->where('role', $request->role);
+        }
+        $users = $query->get();
         return view('admin.users', compact('users'));
     }
 
@@ -20,13 +24,14 @@ class AdminController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
+            'role' => 'required|in:admin,user',
         ]);
 
         User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => bcrypt($validated['password']),
-            'role' => 'user',
+            'role' => $validated['role'],
         ]);
 
         return back()->with('success', 'User account created successfully!');
@@ -39,6 +44,15 @@ class AdminController extends Controller
         }
         $user->delete();
         return back()->with('success', 'User account deleted successfully!');
+    }
+
+    public function resetPassword(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'new_password' => 'required|string|min:8',
+        ]);
+        $user->update(['password' => bcrypt($validated['new_password'])]);
+        return back()->with('success', 'Password perfectly reset for ' . $user->name);
     }
 
     public function manageSubmissions()

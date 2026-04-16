@@ -24,6 +24,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/users', [AdminController::class, 'manageUsers'])->name('users');
         Route::post('/users', [AdminController::class, 'createUser']);
         Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
+        Route::post('/users/{user}/reset-password', [AdminController::class, 'resetPassword'])->name('users.reset-password');
 
         Route::get('/submissions', [AdminController::class, 'manageSubmissions'])->name('submissions');
         Route::post('/submissions/{submission}/update', [AdminController::class, 'updateSubmission'])->name('submissions.update');

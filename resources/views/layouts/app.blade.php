@@ -6,7 +6,7 @@
     <title>{{ config('app.name', '3DHub') }}</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <!-- Custom Favicon Placeholder -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>">
+    <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon/sabah-logo.png') }}">
 </head>
 <body>
     @auth
@@ -84,7 +84,7 @@
     </div>
 
     <footer style="text-align: center; padding: 40px; color: var(--text-dim); font-size: 0.8rem;">
-        &copy; {{ date('Y') }} 3DHub. Simple and Straightforward.
+        &copy; {{ date('Y') }} Sabah 3DHub.
     </footer>
     <script>
         // Auto-hide alerts after 4 seconds

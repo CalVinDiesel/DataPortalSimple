@@ -17,6 +17,8 @@ return new class extends Migration
             $table->text('output_category')->nullable()->after('category');
             $table->string('image_metadata')->nullable()->after('output_category');
             $table->date('capture_date')->nullable()->after('image_metadata');
+            $table->string('terrain_path')->nullable()->after('capture_date');
+            $table->string('building_path')->nullable()->after('terrain_path');
         });
     }
 
@@ -26,7 +28,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('submissions', function (Blueprint $table) {
-            $table->dropColumn(['camera_config', 'category', 'output_category', 'image_metadata', 'capture_date']);
+            $table->dropColumn(['camera_config', 'category', 'output_category', 'image_metadata', 'capture_date', 'terrain_path', 'building_path']);
         });
     }
 };
