@@ -1058,7 +1058,7 @@
     </script>
     <script>
       (function() {
-        var AUTH_API = 'http://localhost:3000';
+        var AUTH_API = window.location.origin;
         document.addEventListener('DOMContentLoaded', function() {
           var btn = document.getElementById('pricingSubscribeBtn');
           if (!btn) return;

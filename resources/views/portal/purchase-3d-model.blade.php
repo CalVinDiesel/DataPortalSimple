@@ -22,8 +22,8 @@
 <body>
   <script>
     (function() {
-      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin || 'http://localhost:3000');
-      var LANDING = (window.location.origin || 'http://localhost:3000') + '/html/front-pages/{{ route('landing') }}';
+      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin);
+      var LANDING = window.location.origin + '/html/front-pages/{{ route('landing') }}';
       var removalHandled = false;
       function checkRemoval() {
         return fetch(AUTH_API + '/api/auth/me', { credentials: 'include' })

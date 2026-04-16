@@ -1,24 +1,27 @@
-# 🛰️ 3DHub Data Portal
+# 🛰️ SABAH 3DHUB Data Portal
 
-A sleek, simple, and powerful data portal built with Laravel for managing 3D flight datasets. This portal allows users to submit project details and dataset links while ensuring all shared storage is accessible for processing.
+A sleek, simple, and powerful data portal built with Laravel and React for managing 3D flight datasets. This portal allows users to submit project details, and features an integrated 3D viewer for visualizing datasets directly in the browser.
 
 ---
 
 ## 🚀 Features
 
 - **Project Submissions**: Users can submit project metadata, camera configurations, and requested output formats.
+- **Interactive 3D Viewer**: Integrated CesiumJS viewer to visualize 3D models and tilesets, complete with a built-in screenshot capture tool.
 - **Smart Link Validation**: Built-in verification for **Google Drive**, **OneDrive**, and **SharePoint** links to ensure they are set to *"Anyone with the link"*.
-- **Admin Dashboard**: Manage and review submissions through a professional administrative interface.
-- **Rich UI/UX**: Modern glassmorphism design with responsive components.
+- **Admin Dashboard**: Manage and review submissions with older-first queues, and manage 3D Tileset links with copy-to-clipboard utilities.
+- **Rich UI/UX**: Modern, responsive interface built with React and Tailwind CSS, featuring stable queues and session-based warnings.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Framework**: Laravel 11
-- **Styling**: Vanilla CSS (Custom Design System)
+- **Backend**: Laravel 11
+- **Frontend**: React 19 & React Router
+- **3D Engine**: CesiumJS
+- **Styling**: Tailwind CSS
 - **Database**: PostgreSQL (Optimized for Neon)
-- **Frontend Tooling**: Vite & NPM
+- **Tooling**: Vite & NPM
 
 ---
 
@@ -40,11 +43,13 @@ npm run build
 ```
 
 ### 3. Environment Configuration
-Copy the `.env.example` to `.env` and update your database credentials:
+Copy the `.env.example` to `.env` and update your database credentials along with your Cesium Ion token:
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
+
+*Note: Make sure to set `VITE_CESIUM_ION_TOKEN` in your `.env` file to fully enable the 3D Viewer.*
 
 ### 4. Database Setup
 Once your database is connected, initialize the structure and seed the default accounts:

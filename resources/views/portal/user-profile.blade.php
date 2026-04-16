@@ -34,8 +34,8 @@
   <!-- Auth: require any logged-in user (client, subscriber, admin) -->
   <script>
     (function () {
-      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin || 'http://localhost:3000');
-      var LANDING_URL = (window.location.origin || 'http://localhost:3000') + '/html/front-pages/{{ route('landing') }}';
+      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin);
+      var LANDING_URL = window.location.origin + '/html/front-pages/{{ route('landing') }}';
       var removalHandled = false;
 
       function checkAccountRemoved() {
@@ -298,8 +298,8 @@
   <script src="{{ asset('assets/') }}/js/theme-switcher.js"></script>
   <script>
     (function () {
-      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin || 'http://localhost:3000');
-      var LOGIN_URL = (window.location.origin || 'http://localhost:3000') + '/html/front-pages/{{ route('login') }}';
+      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin);
+      var LOGIN_URL = window.location.origin + '/html/front-pages/{{ route('login') }}';
 
       function showMessage(elId, text, isError) {
         var el = document.getElementById(elId);

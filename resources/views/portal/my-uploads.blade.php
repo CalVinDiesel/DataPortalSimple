@@ -476,7 +476,7 @@
   <script>
     function logout() {
       if (!confirm('Are you sure you want to log out?')) return;
-      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin || 'http://localhost:3000');
+      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin);
       var LANDING_URL = window.location.origin + '/html/front-pages/{{ route('landing') }}';
       fetch(AUTH_API + '/api/auth/logout', { method: 'POST', credentials: 'include' })
         .then(function () { window.location.href = AUTH_API + '/api/auth/sign-out?callbackURL=' + encodeURIComponent(LANDING_URL); })
@@ -796,7 +796,7 @@
       saveBtn.disabled = true;
       saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
-      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin || 'http://localhost:3000');
+      var AUTH_API = (window.TemaDataPortal_API_BASE || window.location.origin);
 
       try {
         const response = await fetch(`${AUTH_API}/api/user/my-uploads/${id}`, {

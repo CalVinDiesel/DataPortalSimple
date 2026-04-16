@@ -135,9 +135,9 @@
   <script src="{{ asset('assets/') }}/vendor/js/bootstrap.js"></script>
   <script src="{{ asset('assets/') }}/js/theme-switcher.js"></script>
   <script>
-    var AUTH_GOOGLE_URL = 'http://localhost:3000/api/auth/google';
-    var AUTH_MICROSOFT_URL = 'http://localhost:3000/auth/microsoft/login';
-    var AUTH_API = 'http://localhost:3000';
+    var AUTH_GOOGLE_URL = window.location.origin + '/api/auth/google';
+    var AUTH_MICROSOFT_URL = window.location.origin + '/auth/microsoft/login';
+    var AUTH_API = window.location.origin;
 
     // Password show/hide toggle
     (function() {

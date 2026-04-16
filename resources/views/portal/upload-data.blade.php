@@ -851,7 +851,7 @@
 
   <script>
     // Use same API base as auth so client uploads always go to the server that Admin → Client Uploads uses
-    var UPLOAD_API = (window.TemaDataPortal_API_BASE || window.location.origin || 'http://localhost:3000');
+    var UPLOAD_API = (window.TemaDataPortal_API_BASE || window.location.origin);
 
     var isUploadActive = false;
     var isUploadPaused = false;
