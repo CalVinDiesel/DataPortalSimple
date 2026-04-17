@@ -69,6 +69,7 @@ class AdminController extends Controller
             'admin_drive_link' => 'nullable|url',
             'terrain_path' => 'nullable|url',
             'building_path' => 'nullable|url',
+            'orthophoto_path' => 'nullable|url',
             'rejection_reason' => 'nullable|string',
         ]);
 

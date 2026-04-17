@@ -45,7 +45,7 @@
                     <td>
                         @if($submission->status === 'completed')
                         <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px;">
-                            <div style="display: flex; gap: 10px; justify-content: flex-start; align-items: center;">
+                            <div style="display: flex; gap: 10px; justify-content: flex-start; align-items: center; flex-wrap: wrap;">
                                 @if($submission->admin_drive_link)
                                     <a href="{{ $submission->admin_drive_link }}" target="_blank" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.8rem; width: auto; margin: 0; user-select: none;">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 256 256" style="margin-right: 6px;"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V40a8,8,0,0,0-16,0v84.69L93.66,98.34A8,8,0,0,0,82.34,109.66Z"></path></svg>
@@ -59,26 +59,70 @@
                                         <span>View Model</span>
                                     </a>
 
+                                    <a href="#" target="_blank" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.8rem; width: auto; margin: 0; background: #10b981; user-select: none;" onclick="alert('GeoExplorer URL will go here!'); return false;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 256 256" style="margin-right: 6px;"><path d="M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-7.16,0L27.08,65.69A8,8,0,0,0,24,72.84V200a8,8,0,0,0,11.55,7.16l63.52-31.76,61.35,30.68a8,8,0,0,0,7.16,0l65.34-32.85A8,8,0,0,0,240,167.16V40A8,8,0,0,0,228.92,49.69ZM96,49.6l56,28v112.8l-56-28ZM40,78.53l40-20v112.8l-40,20ZM216,177.47l-48,24V88.67l48-24Z"></path></svg>
+                                        <span>GeoExplorer</span>
+                                    </a>
+                                @endif
+
+                                @if($submission->processed_data_path && $submission->terrain_path && $submission->building_path)
                                     <a href="https://geo.digitalsabah.gov.my/flood/?terrain={{ urlencode($submission->terrain_path ?? '') }}&tiles3d={{ urlencode($submission->processed_data_path ?? '') }}&buildings={{ urlencode($submission->building_path ?? '') }}" target="_blank" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.8rem; width: auto; margin: 0; background: #06b6d4; user-select: none;">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 256 256" style="margin-right: 6px;"><path d="M224,144a8,8,0,0,1,0,16c-11.83,0-25.59,4.45-38.64,13.25-16.71,11.27-33.19,18.75-47.36,18.75s-30.65-7.48-47.36-18.75C77.59,164.45,63.83,160,52,160a8,8,0,0,1,0-16c11.83,0,25.59,4.45,38.64,13.25,16.71,11.27,33.19,18.75,47.36,18.75s30.65-7.48,47.36-18.75C198.41,148.45,212.17,144,224,144Zm0-48a8,8,0,0,0,0,16c11.83,0,25.59,4.45,38.64,13.25,16.71,11.27,33.19,18.75,47.36,18.75s30.65-7.48,47.36-18.75C77.59,116.45,63.83,112,52,112a8,8,0,0,0,0-16c11.83,0,25.59,4.45,38.64,13.25,16.71,11.27,33.19,18.75,47.36,18.75s30.65-7.48,47.36-18.75C198.41,100.45,212.17,96,224,96Z"></path></svg>
-                                        <span>Wind & Flood Simulation</span>
+                                        <span>Flood Simulation</span>
                                     </a>
                                 @endif
                             </div>
 
-                            @if($submission->processed_data_path)
-                                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-width: 250px; max-width: 400px; text-align: left; box-shadow: inset 0 0 20px rgba(0,0,0,0.2);">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                        <div style="font-size: 0.65rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; opacity: 0.7;">3D Tileset Link</div>
-                                        <button onclick="copyToClipboard('{{ $submission->processed_data_path }}', this)" style="background: none; border: none; padding: 2px; cursor: pointer; display: flex; align-items: center; color: var(--secondary); opacity: 0.8;" title="Copy to clipboard">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M216,40H88A16,16,0,0,0,72,56V72H56A16,16,0,0,0,40,88V216a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V200h16a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,144H200V88a16,16,0,0,0-16-16H88V56H216Zm-32,32H56V88H184Z"></path></svg>
-                                        </button>
+                                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-width: 250px; max-width: 100%; text-align: left; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px;">
+
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                            <div style="font-size: 0.65rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; opacity: 0.7;">3D Tileset URL</div>
+                                            <button onclick="copyToClipboard('{{ $submission->processed_data_path }}', this)" style="background: none; border: none; padding: 2px; cursor: pointer; display: flex; align-items: center; color: var(--secondary); opacity: 0.8;" title="Copy to clipboard">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M216,40H88A16,16,0,0,0,72,56V72H56A16,16,0,0,0,40,88V216a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V200h16a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,144H200V88a16,16,0,0,0-16-16H88V56H216Zm-32,32H56V88H184Z"></path></svg>
+                                            </button>
+                                        </div>
+                                        <a href="{{ $submission->processed_data_path ?: '#' }}" target="_blank" style="font-size: 0.75rem; color: var(--text); text-decoration: none; word-break: break-all; line-height: 1.5; display: block; opacity: 0.9;">
+                                            {{ $submission->processed_data_path ?: 'Not provided' }}
+                                        </a>
                                     </div>
-                                    <a href="{{ $submission->processed_data_path }}" target="_blank" style="font-size: 0.75rem; color: var(--text); text-decoration: none; word-break: break-all; line-height: 1.5; display: block; opacity: 0.9;">
-                                        {{ $submission->processed_data_path }}
-                                    </a>
+
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                            <div style="font-size: 0.65rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; opacity: 0.7;">Terrain URL</div>
+                                            <button onclick="copyToClipboard('{{ $submission->terrain_path }}', this)" style="background: none; border: none; padding: 2px; cursor: pointer; display: flex; align-items: center; color: var(--secondary); opacity: 0.8;" title="Copy to clipboard">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M216,40H88A16,16,0,0,0,72,56V72H56A16,16,0,0,0,40,88V216a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V200h16a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,144H200V88a16,16,0,0,0-16-16H88V56H216Zm-32,32H56V88H184Z"></path></svg>
+                                            </button>
+                                        </div>
+                                        <a href="{{ $submission->terrain_path ?: '#' }}" target="_blank" style="font-size: 0.75rem; color: var(--text); text-decoration: none; word-break: break-all; line-height: 1.5; display: block; opacity: 0.9;">
+                                            {{ $submission->terrain_path ?: 'Not provided' }}
+                                        </a>
+                                    </div>
+
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                            <div style="font-size: 0.65rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; opacity: 0.7;">Building URL</div>
+                                            <button onclick="copyToClipboard('{{ $submission->building_path }}', this)" style="background: none; border: none; padding: 2px; cursor: pointer; display: flex; align-items: center; color: var(--secondary); opacity: 0.8;" title="Copy to clipboard">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M216,40H88A16,16,0,0,0,72,56V72H56A16,16,0,0,0,40,88V216a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V200h16a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,144H200V88a16,16,0,0,0-16-16H88V56H216Zm-32,32H56V88H184Z"></path></svg>
+                                            </button>
+                                        </div>
+                                        <a href="{{ $submission->building_path ?: '#' }}" target="_blank" style="font-size: 0.75rem; color: var(--text); text-decoration: none; word-break: break-all; line-height: 1.5; display: block; opacity: 0.9;">
+                                            {{ $submission->building_path ?: 'Not provided' }}
+                                        </a>
+                                    </div>
+
+                                    <div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                            <div style="font-size: 0.65rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; opacity: 0.7;">Orthophoto URL</div>
+                                            <button onclick="copyToClipboard('{{ $submission->orthophoto_path }}', this)" style="background: none; border: none; padding: 2px; cursor: pointer; display: flex; align-items: center; color: var(--secondary); opacity: 0.8;" title="Copy to clipboard">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M216,40H88A16,16,0,0,0,72,56V72H56A16,16,0,0,0,40,88V216a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V200h16a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,144H200V88a16,16,0,0,0-16-16H88V56H216Zm-32,32H56V88H184Z"></path></svg>
+                                            </button>
+                                        </div>
+                                        <a href="{{ $submission->orthophoto_path ?: '#' }}" target="_blank" style="font-size: 0.75rem; color: var(--text); text-decoration: none; word-break: break-all; line-height: 1.5; display: block; opacity: 0.9;">
+                                            {{ $submission->orthophoto_path ?: 'Not provided' }}
+                                        </a>
+                                    </div>
                                 </div>
-                            @endif
                         </div>
                         @elseif($submission->status === 'rejected')
                         <div style="text-align: left;">

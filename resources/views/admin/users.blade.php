@@ -33,9 +33,11 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h2 style="margin: 0;">User Accounts</h2>
             <div>
-                <a href="{{ route('admin.users') }}" style="margin-right: 10px; text-decoration: {{ !request('role') ? 'underline' : 'none' }}; color: var(--text-base);">All</a>
-                <a href="{{ route('admin.users', ['role' => 'admin']) }}" style="margin-right: 10px; text-decoration: {{ request('role') === 'admin' ? 'underline' : 'none' }}; color: var(--text-base);">Admins</a>
-                <a href="{{ route('admin.users', ['role' => 'user']) }}" style="text-decoration: {{ request('role') === 'user' ? 'underline' : 'none' }}; color: var(--text-base);">Users</a>
+                <select onchange="window.location.href=this.value" style="padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-base); outline: none; cursor: pointer; min-width: 120px;">
+                    <option value="{{ route('admin.users') }}" {{ !request('role') ? 'selected' : '' }}>All Roles</option>
+                    <option value="{{ route('admin.users', ['role' => 'admin']) }}" {{ request('role') === 'admin' ? 'selected' : '' }}>Admins</option>
+                    <option value="{{ route('admin.users', ['role' => 'user']) }}" {{ request('role') === 'user' ? 'selected' : '' }}>Users</option>
+                </select>
             </div>
         </div>
         <div class="table-container">
@@ -69,12 +71,12 @@
                                 ">
                                     @csrf
                                     <input type="hidden" name="new_password" id="pwd_{{ $user->id }}" value="">
-                                    <button type="submit" style="background: none; border: none; color: #60a5fa; cursor: pointer;">Reset Password</button>
+                                    <button type="submit" style="background: #3b82f6; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 500;">Reset Password</button>
                                 </form>
                                 <form action="{{ route('admin.users.delete', $user) }}" method="POST" onsubmit="return confirm('Delete this user?')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" style="background: none; border: none; color: #f87171; cursor: pointer;">Delete</button>
+                                    <button type="submit" style="background: #ef4444; border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 500;">Delete</button>
                                 </form>
                             </div>
                         </td>

@@ -75,6 +75,10 @@
                                     <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Building URL</label>
                                     <input type="url" name="building_path" placeholder="https://..." value="{{ $submission->building_path }}" style="width: 100%; padding: 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white;">
                                 </div>
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Orthophoto URL</label>
+                                    <input type="url" name="orthophoto_path" placeholder="https://..." value="{{ $submission->orthophoto_path }}" style="width: 100%; padding: 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white;">
+                                </div>
                             </div>
 
                             <div id="rejected-fields-{{ $submission->id }}" style="display: {{ $submission->status == 'rejected' ? 'flex' : 'none' }}; flex-direction: column; gap: 8px;">

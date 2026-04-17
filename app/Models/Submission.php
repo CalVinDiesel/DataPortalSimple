@@ -22,7 +22,8 @@ class Submission extends Model
         'admin_drive_link',
         'rejection_reason',
         'terrain_path',
-        'building_path'
+        'building_path',
+        'orthophoto_path'
     ];
 
     public function user(): BelongsTo
