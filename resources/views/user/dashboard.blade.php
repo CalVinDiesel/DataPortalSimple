@@ -59,15 +59,17 @@
                                         <span>View Model</span>
                                     </a>
 
-                                   <form action="https://explorer.digitalsabah.gov.my/api/load" method="POST" target="_blank" style="margin: 0; padding: 0;">
-                                        @csrf
-                                        <input type="hidden" name="url" value="{{ $submission->processed_data_path }}">
-                                        <input type="hidden" name="type" value="load">  {{-- ✅ add type --}}
-                                        <button type="submit" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.8rem; width: auto; margin: 0; background: #10b981; user-select: none; border: none; display: flex; align-items: center; cursor: pointer;">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 256 256" style="margin-right: 6px;"><path d="M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-7.16,0L27.08,65.69A8,8,0,0,0,24,72.84V200a8,8,0,0,0,11.55,7.16l63.52-31.76,61.35,30.68a8,8,0,0,0,7.16,0l65.34-32.85A8,8,0,0,0,240,167.16V40A8,8,0,0,0,228.92,49.69ZM96,49.6l56,28v112.8l-56-28ZM40,78.53l40-20v112.8l-40,20ZM216,177.47l-48,24V88.67l48-24Z"></path></svg>
+                                    <button id="geoExplorerBtn"
+                                            class="btn btn-primary"
+                                            style="padding:10px 20px;font-size:0.8rem;background:#10b981;border:none;display:flex;align-items:center;cursor:pointer;">
+
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white"
+                                                viewBox="0 0 256 256" style="margin-right:6px;">
+                                                <path d="M228.92,49.69a8,8,0,0,0-6.86-1.45L160.93,63.52,99.58,32.84a8,8,0,0,0-7.16,0L27.08,65.69A8,8,0,0,0,24,72.84V200a8,8,0,0,0,11.55,7.16l63.52-31.76,61.35,30.68a8,8,0,0,0,7.16,0l65.34-32.85A8,8,0,0,0,240,167.16V40A8,8,0,0,0,228.92,49.69Z"/>
+                                            </svg>
+
                                             <span>GeoExplorer</span>
-                                        </button>
-                                    </form>
+                                    </button>
                                 @endif
 
                                 @if($submission->processed_data_path && $submission->terrain_path && $submission->building_path)
@@ -179,6 +181,42 @@ function copyToClipboard(text, btn) {
         }, 2000);
     });
 }
+
+document.getElementById('geoExplorerBtn').addEventListener('click', async function () {
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (!csrfToken) {
+        console.error("Missing CSRF token");
+        return;
+    }
+
+    try {
+        const res = await fetch('https://explorer.digitalsabah.gov.my/api/load', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({
+                url: "https://demo-services.geovidia.my/Penampang/3DTiles/tileset.json",
+                type: "load"
+            })
+        });
+
+        const data = await res.json();
+        console.log("POST result:", data);
+
+        // ✅ OPEN IN NEW TAB
+        window.open(
+            "https://explorer.digitalsabah.gov.my/map",
+            "_blank"
+        );
+
+    } catch (err) {
+        console.error("Load error:", err);
+    }
+});
 </script>
 @endpush
 @endsection

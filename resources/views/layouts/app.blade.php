@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ config('app.name', '3DHub') }}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <!-- Custom Favicon Placeholder -->
     <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon/sabah-logo.png') }}">
