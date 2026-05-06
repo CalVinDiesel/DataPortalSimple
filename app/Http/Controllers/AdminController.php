@@ -67,6 +67,7 @@ class AdminController extends Controller
             'status' => 'required|in:pending,processing,completed,rejected',
             'processed_data_path' => 'nullable|string',
             'admin_drive_link' => 'nullable|url',
+            'sftp_result_path' => 'nullable|string',
             'terrain_path' => 'nullable|url',
             'building_path' => 'nullable|url',
             'orthophoto_path' => 'nullable|url',

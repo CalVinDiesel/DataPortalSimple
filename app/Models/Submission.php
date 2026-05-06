@@ -17,13 +17,25 @@ class Submission extends Model
         'image_metadata',
         'capture_date',
         'google_drive_link',
+        'sftp_host',
+        'sftp_port',
+        'sftp_username',
+        'sftp_password',
+        'sftp_path',
+        'sftp_result_path',
         'status',
+        'is_archived',
         'processed_data_path',
         'admin_drive_link',
         'rejection_reason',
         'terrain_path',
         'building_path',
         'orthophoto_path'
+    ];
+
+    protected $casts = [
+        'is_archived' => 'boolean',
+        'capture_date' => 'date',
     ];
 
     public function user(): BelongsTo

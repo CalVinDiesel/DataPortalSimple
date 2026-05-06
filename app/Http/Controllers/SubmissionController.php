@@ -22,9 +22,12 @@ class SubmissionController extends Controller
             'image_metadata' => 'required|in:EXIF,POS,EXIF & POS',
             'capture_date' => 'nullable|date',
             'google_drive_link' => [
-                'required',
+                'required_without:sftp_host',
+                'nullable',
                 'url',
                 function ($attribute, $value, $fail) {
+                    if (!$value) return; // Skip if empty (SFTP used instead)
+
                     $isGoogle = str_contains($value, 'drive.google.com');
                     $isOneDrive = str_contains($value, 'onedrive.live.com') || str_contains($value, 'sharepoint.com') || str_contains($value, '1drv.ms');
                     
@@ -46,9 +49,7 @@ class SubmissionController extends Controller
                             }
 
                             $finalUrl = $response->effectiveUri();
-                            $htmlContent = $response->body();
-
-                             if (str_contains($finalUrl, 'accounts.google.com')) {
+                            if (str_contains($finalUrl, 'accounts.google.com')) {
                                 $fail('Access Denied: The Google Drive link is Private. Please set it to "Anyone with the link".');
                                 return;
                             }
@@ -70,8 +71,6 @@ class SubmissionController extends Controller
                             }
 
                             $finalUrl = $response->effectiveUri();
-                            
-                            // Check for login redirection (Personal or Business/SharePoint)
                             if (str_contains($finalUrl, 'login.live.com') || 
                                 str_contains($finalUrl, 'login.microsoftonline.com') ||
                                 str_contains($finalUrl, 'login.windows.net')) {
@@ -79,32 +78,38 @@ class SubmissionController extends Controller
                                 return;
                             }
 
-                             // Basic check for restricted SharePoint sites
                             if ($response->status() === 401 || $response->status() === 403) {
                                 $fail('Access Denied: You do not have permission to access this SharePoint link.');
                                 return;
                             }
-
                         } catch (\Exception $e) {
                             $fail('Could not verify OneDrive link permissions. Please ensure the link is publicly accessible.');
                         }
                     }
                 },
             ],
+            'sftp_host' => 'required_without:google_drive_link|nullable|string|max:255',
+            'sftp_port' => 'nullable|integer',
+            'sftp_username' => 'required_with:sftp_host|nullable|string|max:255',
+            'sftp_password' => 'required_with:sftp_host|nullable|string|max:255',
+            'sftp_path' => 'nullable|string|max:255',
         ]);
 
         $submission = Submission::create([
             'user_id' => Auth::id(),
             'project_name' => $validated['project_name'],
             'description' => $validated['description'],
-            'latitude' => 0, // Default to 0 for now
-            'longitude' => 0, // Default to 0 for now
             'camera_config' => $validated['camera_config'],
             'category' => $validated['category'],
             'output_category' => implode(',', $validated['output_category']),
             'image_metadata' => $validated['image_metadata'],
             'capture_date' => $validated['capture_date'],
-            'google_drive_link' => $validated['google_drive_link'],
+            'google_drive_link' => $validated['google_drive_link'] ?? null,
+            'sftp_host' => $validated['sftp_host'] ?? null,
+            'sftp_port' => $validated['sftp_port'] ?? 22,
+            'sftp_username' => $validated['sftp_username'] ?? null,
+            'sftp_password' => $validated['sftp_password'] ?? null,
+            'sftp_path' => $validated['sftp_path'] ?? null,
             'status' => 'pending',
         ]);
 

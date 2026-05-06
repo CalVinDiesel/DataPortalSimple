@@ -15,7 +15,7 @@
                     <th>Camera/Category</th>
                     <th>Outputs</th>
                     <th>Metadata</th>
-                    <th>Google Drive</th>
+                    <th>Data Source</th>
                     <th>Status</th>
                     <th>Action</th>
                 </tr>
@@ -40,10 +40,32 @@
                         @endif
                     </td>
                     <td>
-                        <a href="{{ $submission->google_drive_link }}" target="_blank" style="color: var(--primary);">Open Link &rarr;</a>
+                        @if($submission->google_drive_link)
+                            <a href="{{ $submission->google_drive_link }}" target="_blank" style="color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256"><path d="M232,128a104,104,0,1,1-104-104A104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Zm-40,0a48,48,0,1,1-48-48A48.05,48.05,0,0,1,176,128Z"></path></svg>
+                                <span>Cloud Storage</span>
+                            </a>
+                        @elseif($submission->sftp_host)
+                            <div style="font-size: 0.75rem; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; border: 1px solid var(--border); color: var(--text); line-height: 1.4;">
+                                <div style="display: flex; align-items: center; gap: 4px; color: #10b981; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; font-size: 0.65rem;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a48,48,0,1,1-48-48A48.05,48.05,0,0,1,176,128Z"></path></svg>
+                                    <span>SFTP SERVER</span>
+                                </div>
+                                <strong>Host name:</strong> {{ $submission->sftp_host }}<br>
+                                <strong>Port number:</strong> {{ $submission->sftp_port }}<br>
+                                <strong>User name:</strong> {{ $submission->sftp_username }}<br>
+                                <strong>Password:</strong> {{ $submission->sftp_password }}<br>
+                                <strong>Data Path:</strong> {{ $submission->sftp_path ?? '/' }}
+                            </div>
+                        @else
+                            <span style="color: var(--text-dim); font-style: italic;">No source provided</span>
+                        @endif
                     </td>
                     <td>
                         <span class="badge badge-{{ strtolower($submission->status) }}">{{ $submission->status }}</span>
+                        @if($submission->is_archived)
+                            <span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem; margin-top: 4px; display: inline-block;">ARCHIVED</span>
+                        @endif
                     </td>
                     <td>
                         <form action="{{ route('admin.submissions.update', $submission) }}" method="POST" style="display: flex; flex-direction: column; gap: 8px;">
@@ -59,10 +81,17 @@
                             </div>
                             
                             <div id="completed-fields-{{ $submission->id }}" style="display: {{ $submission->status == 'completed' ? 'flex' : 'none' }}; flex-direction: column; gap: 8px; margin-top: 8px;">
+                                @if(!$submission->sftp_host)
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
                                     <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Google Drive Target Link</label>
                                     <input type="url" name="admin_drive_link" placeholder="Download GDrive Link" value="{{ $submission->admin_drive_link }}" style="width: 100%; padding: 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white;">
                                 </div>
+                                @else
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">SFTP Result Path (on customer server)</label>
+                                    <input type="text" name="sftp_result_path" placeholder="e.g. /home/results/model_v1.zip" value="{{ $submission->sftp_result_path }}" style="width: 100%; padding: 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white;">
+                                </div>
+                                @endif
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
                                     <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">3D Tiles URL (Main Model)</label>
                                     <input type="url" name="processed_data_path" placeholder="Model Viewer URL (https://...)" value="{{ $submission->processed_data_path }}" style="width: 100%; padding: 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white;">

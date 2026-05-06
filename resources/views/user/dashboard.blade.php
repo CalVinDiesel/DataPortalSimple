@@ -13,7 +13,7 @@
 <div class="card" style="text-align: center; padding: 60px;">
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="var(--text-dim)" viewBox="0 0 256 256"><path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208ZM160,128a32,32,0,1,1-32-32A32,32,0,0,1,160,128Z"></path></svg>
     <h2 style="margin-top: 20px;">No projects yet</h2>
-    <p style="color: var(--text-dim); margin-top: 8px;">Begin by submitting your first raw data package from Google Drive.</p>
+    <p style="color: var(--text-dim); margin-top: 8px;">Begin by submitting your first raw data package via Google Drive or SFTP Server.</p>
 </div>
 @else
 <div class="card">
@@ -45,6 +45,12 @@
                     <td>
                         @if($submission->status === 'completed')
                         <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 12px;">
+                            @if($submission->is_archived)
+                                <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px; padding: 12px; font-size: 0.8rem; color: #eab308; display: flex; align-items: center; gap: 8px; width: 100%;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,160H40V56H216V200ZM176,120a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,120Z"></path></svg>
+                                    <span><strong>Project Archived</strong> - The files have been moved to backup storage to save space. Please contact the Admin to retrieve this data.</span>
+                                </div>
+                            @else
                             <div style="display: flex; gap: 10px; justify-content: flex-start; align-items: center; flex-wrap: wrap;">
                                 @if($submission->admin_drive_link)
                                     <a href="{{ $submission->admin_drive_link }}" target="_blank" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.8rem; width: auto; margin: 0; user-select: none;">
@@ -77,8 +83,15 @@
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 256 256" style="margin-right: 6px;"><path d="M224,144a8,8,0,0,1,0,16c-11.83,0-25.59,4.45-38.64,13.25-16.71,11.27-33.19,18.75-47.36,18.75s-30.65-7.48-47.36-18.75C77.59,164.45,63.83,160,52,160a8,8,0,0,1,0-16c11.83,0,25.59,4.45,38.64,13.25,16.71,11.27,33.19,18.75,47.36,18.75s30.65-7.48,47.36-18.75C198.41,148.45,212.17,144,224,144Zm0-48a8,8,0,0,0,0,16c11.83,0,25.59,4.45,38.64,13.25,16.71,11.27,33.19,18.75,47.36,18.75s30.65-7.48,47.36-18.75C77.59,116.45,63.83,112,52,112a8,8,0,0,0,0-16c11.83,0,25.59,4.45,38.64,13.25,16.71,11.27,33.19,18.75,47.36,18.75s30.65-7.48,47.36-18.75C198.41,100.45,212.17,96,224,96Z"></path></svg>
                                         <span>Flood Simulation</span>
                                     </a>
-                                @endif
-                            </div>
+                                    @endif
+                                    @if($submission->sftp_result_path)
+                                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 10px; font-size: 0.8rem; color: var(--text); display: flex; align-items: center; gap: 8px;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#10b981" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a48,48,0,1,1-48-48A48.05,48.05,0,0,1,176,128Z"></path></svg>
+                                            <span><strong>SFTP Path:</strong> {{ $submission->sftp_result_path }}</span>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
 
                                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-width: 250px; max-width: 100%; text-align: left; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px;">
 

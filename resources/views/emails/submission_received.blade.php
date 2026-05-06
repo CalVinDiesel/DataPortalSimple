@@ -21,8 +21,18 @@
         <div class="field"><span class="label">Image Metadata:</span> {{ $submission->image_metadata }}</div>
         
         <div class="field" style="margin-top: 20px;">
-            <span class="label">Dataset Link:</span><br>
-            <a href="{{ $submission->google_drive_link }}">{{ $submission->google_drive_link }}</a>
+            <span class="label">Data Source:</span><br>
+            @if($submission->google_drive_link)
+                <a href="{{ $submission->google_drive_link }}">{{ $submission->google_drive_link }}</a>
+            @else
+                <div style="background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 8px;">
+                    <strong>Host name:</strong> {{ $submission->sftp_host }}<br>
+                    <strong>Port number:</strong> {{ $submission->sftp_port }}<br>
+                    <strong>User name:</strong> {{ $submission->sftp_username }}<br>
+                    <strong>Password:</strong> {{ $submission->sftp_password }}<br>
+                    <strong>Data Path:</strong> {{ $submission->sftp_path ?? '/' }}
+                </div>
+            @endif
         </div>
 
         <div class="field" style="margin-top: 20px;">
