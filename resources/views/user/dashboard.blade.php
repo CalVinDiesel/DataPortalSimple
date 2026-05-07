@@ -147,6 +147,11 @@
                         @elseif($submission->status === 'rejected')
                         <div style="text-align: left;">
                             <span style="color: #ef4444; font-size: 0.8rem; display: block; margin-bottom: 4px;">Rejected</span>
+                            @if($submission->admin_remarks)
+                                <small style="color: #ef4444; font-style: italic; display: block; max-width: 250px; margin-bottom: 4px;">
+                                    Remark: {{ $submission->admin_remarks }}
+                                </small>
+                            @endif
                             @if($submission->rejection_reason)
                                 <small style="color: var(--text-dim); font-style: italic; display: block; max-width: 250px;">
                                     Reason: {{ $submission->rejection_reason }}
@@ -154,9 +159,17 @@
                             @endif
                         </div>
                         @else
-                        <div style="text-align: left; display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
-                            <span class="pulse-dot"></span>
-                            <span style="color: var(--text-dim); font-size: 0.82rem; font-weight: 500; letter-spacing: 0.02em;">Processing Data...</span>
+                        <div style="text-align: left; display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
+                                <span class="pulse-dot"></span>
+                                <span style="color: var(--text-dim); font-size: 0.82rem; font-weight: 500; letter-spacing: 0.02em;">
+                                    @if($submission->status === 'processing')
+                                        {{ $submission->admin_remarks ?: 'Processing Data...' }}
+                                    @else
+                                        {{ $submission->admin_remarks ?: 'Pending Review' }}
+                                    @endif
+                                </span>
+                            </div>
                         </div>
                         <style>
                             @keyframes pulse {

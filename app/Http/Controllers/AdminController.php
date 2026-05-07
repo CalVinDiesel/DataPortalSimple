@@ -72,6 +72,7 @@ class AdminController extends Controller
             'building_path' => 'nullable|url',
             'orthophoto_path' => 'nullable|url',
             'rejection_reason' => 'nullable|string',
+            'admin_remarks' => 'nullable|string',
         ]);
 
         $submission->update($validated);

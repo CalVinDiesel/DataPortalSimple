@@ -27,6 +27,7 @@ class Submission extends Model
         'is_archived',
         'processed_data_path',
         'admin_drive_link',
+        'admin_remarks',
         'rejection_reason',
         'terrain_path',
         'building_path',

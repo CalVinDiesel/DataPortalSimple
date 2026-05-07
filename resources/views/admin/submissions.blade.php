@@ -80,6 +80,11 @@
                                 <button type="submit" style="background: var(--primary); border: none; color: white; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 0.75rem;">Update</button>
                             </div>
                             
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <label style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Admin Remarks</label>
+                                <input type="text" name="admin_remarks" placeholder="e.g. Processing 50%..." value="{{ $submission->admin_remarks }}" style="width: 100%; padding: 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white;">
+                            </div>
+                            
                             <div id="completed-fields-{{ $submission->id }}" style="display: {{ $submission->status == 'completed' ? 'flex' : 'none' }}; flex-direction: column; gap: 8px; margin-top: 8px;">
                                 @if(!$submission->sftp_host)
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
