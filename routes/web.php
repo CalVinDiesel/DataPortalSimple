@@ -36,6 +36,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/submit', [SubmissionController::class, 'store']);
         Route::get('/register-model', [UserController::class, 'showRegisterModelForm'])->name('register_model');
         Route::post('/register-model', [SubmissionController::class, 'storeExternal'])->name('register_model.submit');
+        Route::post('/register-model/verify', [SubmissionController::class, 'verifyExternalFolder'])->name('register_model.verify');
         Route::get('/view/{submission}', [UserController::class, 'viewProject'])->name('view');
     });
 });

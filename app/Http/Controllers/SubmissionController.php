@@ -110,6 +110,7 @@ class SubmissionController extends Controller
             'sftp_username' => $validated['sftp_username'] ?? null,
             'sftp_password' => $validated['sftp_password'] ?? null,
             'sftp_path' => $validated['sftp_path'] ?? null,
+            'user_remarks' => $request->remarks,
             'status' => 'pending',
         ]);
 
@@ -157,11 +158,144 @@ class SubmissionController extends Controller
             'sftp_username' => $request->sftp_username,
             'sftp_password' => $request->sftp_password,
             'sftp_path' => $request->sftp_path,
+            'user_remarks' => $request->remarks,
             'camera_config' => 'Single-Lens',
             'category' => 'External Registration',
             'image_metadata' => 'EXIF',
         ]);
 
         return redirect()->route('dashboard')->with('success', 'External model registered successfully. It will appear on your dashboard once verified by the Admin.');
+    }
+
+    /**
+     * Verify Google Drive / SFTP folders before submission.
+     */
+    public function verifyExternalFolder(Request $request, \App\Services\GoogleDriveService $driveService)
+    {
+        $link = $request->input('google_drive_link');
+        if (!$link) {
+            return response()->json(['success' => false, 'error' => 'Please provide a valid Google Drive link.'], 400);
+        }
+
+        // 1. Parse Folder Link
+        $folderId = $driveService->parseFolderId($link);
+        if (!$folderId) {
+            return response()->json(['success' => false, 'error' => 'Could not extract Folder ID. Make sure it is a valid Google Drive folder link.'], 400);
+        }
+
+        // 2. Scan Folder Contents
+        $files = $driveService->listFilesInFolder($folderId);
+        if (empty($files)) {
+            return response()->json(['success' => false, 'error' => 'No files found or folder is not publicly shared. Please ensure you set it to "Anyone with the link".'], 400);
+        }
+
+        // 3. Define the Validation Rules (Boss Rules 2, 3, and 4)
+        $rules = [
+            '3d_tileset' => [
+                'expected_name' => 'tileset.json',
+                'required' => true,
+                'max_size' => 50 * 1024 * 1024, // 50MB Max
+                'label' => '3D Tileset (tileset.json)',
+                'allowed_mimes' => ['application/json', 'text/plain'],
+            ],
+            'terrain' => [
+                'expected_name' => 'layer.json',
+                'required' => false,
+                'max_size' => 10 * 1024 * 1024, // 10MB Max
+                'label' => 'Terrain (layer.json)',
+                'allowed_mimes' => ['application/json', 'text/plain'],
+            ],
+            'building' => [
+                'expected_name' => 'building.geojson',
+                'required' => false,
+                'max_size' => 500 * 1024 * 1024, // 500MB Max
+                'label' => 'Buildings (building.geojson)',
+                'allowed_mimes' => ['application/json', 'text/plain', 'application/geo+json'],
+            ],
+            'orthophoto' => [
+                'expected_name' => 'ortho_final.tif',
+                'required' => false,
+                'max_size' => 10 * 1024 * 1024 * 1024, // 10GB Max
+                'label' => 'Orthophoto (ortho_final.tif)',
+                'allowed_mimes' => ['image/tiff', 'application/octet-stream'],
+            ]
+        ];
+
+        $results = [];
+        $hasRequired = false;
+
+        // 4. Verify Each File Against the Rules
+        foreach ($rules as $key => $rule) {
+            $foundFile = null;
+            foreach ($files as $file) {
+                if (strtolower($file['name']) === strtolower($rule['expected_name'])) {
+                    $foundFile = $file;
+                    break;
+                }
+            }
+
+            if ($foundFile) {
+                $size = $foundFile['size'] ?? 0;
+                $mime = $foundFile['mimeType'] ?? '';
+
+                // Check Boss Rule 4 (Size Limit check)
+                if ($size > $rule['max_size']) {
+                    $results[$key] = [
+                        'status' => 'error',
+                        'message' => "Exceeds limit of " . $this->formatBytes($rule['max_size']) . " (Current: " . $this->formatBytes($size) . ")",
+                        'file' => $foundFile['name'],
+                    ];
+                }
+                // Check Boss Rule 3 (Format / Anti-Spoofing check)
+                elseif (!empty($mime) && !in_array($mime, $rule['allowed_mimes'])) {
+                    $results[$key] = [
+                        'status' => 'error',
+                        'message' => "Spoofing detected! Expected JSON/text, but got: " . $mime,
+                        'file' => $foundFile['name'],
+                    ];
+                } else {
+                    $results[$key] = [
+                        'status' => 'success',
+                        'message' => "Verified (" . $this->formatBytes($size) . ")",
+                        'file' => $foundFile['name'],
+                    ];
+                    if ($rule['required']) {
+                        $hasRequired = true;
+                    }
+                }
+            } else {
+                if ($rule['required']) {
+                    $results[$key] = [
+                        'status' => 'error',
+                        'message' => "Missing required file: " . $rule['expected_name'],
+                        'file' => null,
+                    ];
+                } else {
+                    $results[$key] = [
+                        'status' => 'warning',
+                        'message' => "Optional file not found",
+                        'file' => null,
+                    ];
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => $hasRequired && !collect($results)->contains('status', 'error'),
+            'results' => $results,
+            'message' => $hasRequired ? 'Folder verification complete!' : 'Missing core required 3D Tileset (tileset.json) file.'
+        ]);
+    }
+
+    /**
+     * Helper to format bytes to human readable sizes.
+     */
+    private function formatBytes($bytes, $precision = 2) {
+        $units = array('B', 'KB', 'MB', 'GB', 'TB');
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        return round($bytes, $precision) . ' ' . $units[$pow];
     }
 }
