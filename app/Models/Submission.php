@@ -29,6 +29,7 @@ class Submission extends Model
         'processed_data_path',
         'admin_drive_link',
         'admin_remarks',
+        'user_remarks',
         'rejection_reason',
         'terrain_path',
         'building_path',

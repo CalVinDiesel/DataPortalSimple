@@ -27,6 +27,14 @@
                     <td>
                         <strong>{{ $submission->project_name }}</strong><br>
                         <small style="color: var(--text-dim)">{{ $submission->created_at->format('M d, Y') }}</small>
+                        
+                        @if($submission->user_remarks)
+                            <div style="margin-top: 8px; padding: 6px 10px; background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981; border-radius: 4px;">
+                                <div style="font-size: 0.6rem; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; margin-bottom: 2px;">Customer Remarks:</div>
+                                <div style="font-size: 0.7rem; color: var(--text); font-style: italic; line-height: 1.3;">"{{ $submission->user_remarks }}"</div>
+                            </div>
+                        @endif
+
                         @if($submission->submission_type === 'external')
                             <br><span style="font-size: 0.65rem; background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.3); text-transform: uppercase; margin-top: 4px; display: inline-block;">External Model</span>
                         @endif
@@ -84,7 +92,13 @@
                     <td>
                         <span class="badge badge-{{ strtolower($submission->status) }}">{{ $submission->status }}</span>
                         @if($submission->is_archived)
-                            <span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem; margin-top: 4px; display: inline-block;">ARCHIVED</span>
+                            <div style="margin-top: 8px;">
+                                <span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem; display: inline-block; margin-bottom: 4px;">ARCHIVED</span>
+                                <form action="{{ route('admin.submissions.unarchive', $submission) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" style="background: transparent; border: 1px solid #eab308; color: #eab308; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 0.65rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(234, 179, 8, 0.1)'" onmouseout="this.style.background='transparent'">Unarchive</button>
+                                </form>
+                            </div>
                         @endif
                     </td>
                     <td>

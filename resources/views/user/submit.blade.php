@@ -127,15 +127,27 @@
                         Our team will use these details to <strong style="color: #10b981;">Pull</strong> the raw data securely using SFTP.
                     </div>
                 </div>
+
             </div>
         </div>
 
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
         <script>
+            let currentMethod = 'cloud';
+            let isFileTransferVerified = false;
+
             function setDataSource(type) {
+                currentMethod = type;
                 const cloudSection = document.getElementById('section-cloud');
                 const sftpSection = document.getElementById('section-sftp');
                 const cloudBtn = document.getElementById('btn-cloud');
                 const sftpBtn = document.getElementById('btn-sftp');
+                const btnSubmit = document.getElementById('btnSubmit');
 
                 if (type === 'cloud') {
                     cloudSection.style.display = 'block';
@@ -147,6 +159,10 @@
                     sftpBtn.style.background = 'rgba(255,255,255,0.05)';
                     sftpBtn.style.border = '1px solid var(--border)';
                     sftpBtn.style.color = 'white';
+
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.opacity = '1';
+                    btnSubmit.style.cursor = 'pointer';
                 } else {
                     cloudSection.style.display = 'none';
                     sftpSection.style.display = 'block';
@@ -157,8 +173,13 @@
                     cloudBtn.style.background = 'rgba(255,255,255,0.05)';
                     cloudBtn.style.border = '1px solid var(--border)';
                     cloudBtn.style.color = 'white';
+
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.opacity = '1';
+                    btnSubmit.style.cursor = 'pointer';
                 }
             }
+
 
             // Set initial state based on old input
             @if(old('sftp_host'))
@@ -168,7 +189,7 @@
 
         <div style="display: flex; gap: 16px; margin-top: 32px;">
             <a href="{{ route('dashboard') }}" class="btn" style="flex: 1; border: 1px solid var(--border); color: var(--text-dim); text-decoration: none; display: flex; align-items: center; justify-content: center;">Cancel</a>
-            <button type="submit" class="btn btn-primary" style="flex: 1;">
+            <button type="submit" id="btnSubmit" class="btn btn-primary" style="flex: 1;">
                 <span>Submit</span>
             </button>
         </div>
