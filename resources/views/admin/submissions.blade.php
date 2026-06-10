@@ -92,7 +92,13 @@
                     <td>
                         <span class="badge badge-{{ strtolower($submission->status) }}">{{ $submission->status }}</span>
                         @if($submission->is_archived)
-                            <span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem; margin-top: 4px; display: inline-block;">ARCHIVED</span>
+                            <div style="margin-top: 8px;">
+                                <span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.65rem; display: inline-block; margin-bottom: 4px;">ARCHIVED</span>
+                                <form action="{{ route('admin.submissions.unarchive', $submission) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" style="background: transparent; border: 1px solid #eab308; color: #eab308; border-radius: 4px; padding: 2px 6px; cursor: pointer; font-size: 0.65rem; transition: background 0.2s;" onmouseover="this.style.background='rgba(234, 179, 8, 0.1)'" onmouseout="this.style.background='transparent'">Unarchive</button>
+                                </form>
+                            </div>
                         @endif
                     </td>
                     <td>

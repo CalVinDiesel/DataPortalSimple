@@ -28,6 +28,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/submissions', [AdminController::class, 'manageSubmissions'])->name('submissions');
         Route::post('/submissions/{submission}/update', [AdminController::class, 'updateSubmission'])->name('submissions.update');
+        Route::post('/submissions/{submission}/unarchive', [AdminController::class, 'unarchiveSubmission'])->name('submissions.unarchive');
     });
 
     // User Routes
@@ -37,6 +38,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/register-model', [UserController::class, 'showRegisterModelForm'])->name('register_model');
         Route::post('/register-model', [SubmissionController::class, 'storeExternal'])->name('register_model.submit');
         Route::post('/register-model/verify', [SubmissionController::class, 'verifyExternalFolder'])->name('register_model.verify');
+        Route::post('/register-model/verify-sftp', [SubmissionController::class, 'verifySftpFolder'])->name('register_model.verify_sftp');
         Route::get('/view/{submission}', [UserController::class, 'viewProject'])->name('view');
     });
 });

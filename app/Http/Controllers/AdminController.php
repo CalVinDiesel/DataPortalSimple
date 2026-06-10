@@ -79,4 +79,13 @@ class AdminController extends Controller
 
         return back()->with('success', 'Submission updated successfully!');
     }
+
+    public function unarchiveSubmission(Submission $submission)
+    {
+        \DB::table('submissions')->where('id', $submission->id)->update([
+            'is_archived' => \DB::raw('false'),
+            'updated_at' => now()
+        ]);
+        return back()->with('success', 'Project successfully unarchived! The customer can now access it again.');
+    }
 }
