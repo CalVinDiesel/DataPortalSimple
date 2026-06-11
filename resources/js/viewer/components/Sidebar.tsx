@@ -238,8 +238,26 @@ function Sidebar({ isOpen, onToggle, viewer, siteTitle = 'SITE', tilesetUrl, dra
                 // Safety timeout - Stop trying after 20 seconds even if it fails
                 setTimeout(() => clearInterval(zoomInterval), 20000);
 
-                if (onTilesetLoad) onTilesetLoad(osmBuildings);
-                console.log('✅ Sidebar: Tileset loaded successfully');
+                // Wait for the actual tiles to finish rendering on screen before dismissing the full-screen loader
+                let hasDismissedLoader = false;
+                osmBuildings.initialTilesLoaded.addEventListener(() => {
+                    if (!hasDismissedLoader && onTilesetLoad) {
+                        hasDismissedLoader = true;
+                        onTilesetLoad(osmBuildings);
+                        console.log('✅ Sidebar: Initial tiles visually rendered');
+                    }
+                });
+
+                // Fallback: If the proxy is extremely slow, dismiss loader after 10 seconds anyway so user isn't permanently locked out
+                setTimeout(() => {
+                    if (!hasDismissedLoader && onTilesetLoad) {
+                        hasDismissedLoader = true;
+                        onTilesetLoad(osmBuildings);
+                        console.log('⚠️ Sidebar: Loader dismissed via 10s fallback');
+                    }
+                }, 10000);
+
+                console.log('✅ Sidebar: Tileset object created successfully');
                 setDataLoaded(true);
             } catch (error) {
                 console.error('❌ Sidebar: Error loading 3D models:', error);

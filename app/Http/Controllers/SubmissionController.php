@@ -170,60 +170,31 @@ class SubmissionController extends Controller
     /**
      * Verify Google Drive / SFTP folders before submission.
      */
-    public function verifyExternalFolder(Request $request, \App\Services\GoogleDriveService $driveService)
+    public function verifyExternalFolder(Request $request, \App\Services\GoogleDriveService $driveService, \App\Services\OneDriveService $oneDriveService)
     {
         $link = $request->input('google_drive_link');
         if (!$link) {
-            return response()->json(['success' => false, 'error' => 'Please provide a valid Google Drive link.'], 400);
+            return response()->json(['success' => false, 'error' => 'Please provide a valid Google Drive or OneDrive link.'], 400);
         }
 
-        // 1. Parse Folder Link
-        $folderId = $driveService->parseFolderId($link);
-        if (!$folderId) {
-            return response()->json(['success' => false, 'error' => 'Could not extract Folder ID. Make sure it is a valid Google Drive folder link.'], 400);
+        $isOneDrive = str_contains($link, 'onedrive.live.com') || str_contains($link, 'sharepoint.com') || str_contains($link, '1drv.ms');
+
+        if ($isOneDrive) {
+            // Scan OneDrive Folder Contents
+            $files = $oneDriveService->listFilesInFolder($link);
+        } else {
+            // 1. Parse Google Drive Folder Link
+            $folderId = $driveService->parseFolderId($link);
+            if (!$folderId) {
+                return response()->json(['success' => false, 'error' => 'Could not extract Folder ID. Make sure it is a valid Google Drive or OneDrive folder link.'], 400);
+            }
+
+            // 2. Scan Google Drive Folder Contents
+            $files = $driveService->listFilesInFolder($folderId);
         }
 
-        // 2. Scan Folder Contents
-        $files = $driveService->listFilesInFolder($folderId);
-        if (empty($files)) {
-            return response()->json(['success' => false, 'error' => 'No files found or folder is not publicly shared. Please ensure you set it to "Anyone with the link".'], 400);
-        }
-
-        // 3. Define the Validation Rules (Boss Rules 2, 3, and 4)
-        $rules = [
-            '3d_tileset' => [
-                'expected_name' => 'tileset.json',
-                'required' => true,
-                'max_size' => 50 * 1024 * 1024, // 50MB Max
-                'min_size' => 100, // 100 bytes min
-                'label' => '3D Tileset (tileset.json)',
-                'allowed_mimes' => ['application/json', 'text/plain'],
-            ],
-            'terrain' => [
-                'expected_name' => 'layer.json',
-                'required' => false,
-                'max_size' => 10 * 1024 * 1024, // 10MB Max
-                'min_size' => 100, // 100 bytes min
-                'label' => 'Terrain (layer.json)',
-                'allowed_mimes' => ['application/json', 'text/plain'],
-            ],
-            'building' => [
-                'expected_name' => 'building.geojson',
-                'required' => false,
-                'max_size' => 500 * 1024 * 1024, // 500MB Max
-                'min_size' => 100, // 100 bytes min
-                'label' => 'Buildings (building.geojson)',
-                'allowed_mimes' => ['application/json', 'text/plain', 'application/geo+json', 'application/octet-stream'],
-            ],
-            'orthophoto' => [
-                'expected_name' => 'ortho.tif',
-                'required' => false,
-                'max_size' => 10 * 1024 * 1024 * 1024, // 10GB Max
-                'min_size' => 100, // 100 bytes min
-                'label' => 'Orthophoto (ortho.tif)',
-                'allowed_mimes' => ['image/tiff', 'application/octet-stream'],
-            ]
-        ];
+        // 3. Get Validation Rules from centralized config
+        $rules = $this->getValidationRules();
 
         $results = [];
         $hasRequired = false;
@@ -320,45 +291,8 @@ class SubmissionController extends Controller
                 $request->sftp_path
             );
 
-            if (empty($files)) {
-                return response()->json(['success' => false, 'error' => 'No files found or unable to access the folder. Please check your path and credentials.'], 400);
-            }
-
-            // Same validation rules as Google Drive
-            $rules = [
-                '3d_tileset' => [
-                    'expected_name' => 'tileset.json',
-                    'required' => true,
-                    'max_size' => 50 * 1024 * 1024,
-                    'min_size' => 100,
-                    'label' => '3D Tileset (tileset.json)',
-                    'allowed_mimes' => ['application/json', 'text/plain'],
-                ],
-                'terrain' => [
-                    'expected_name' => 'layer.json',
-                    'required' => false,
-                    'max_size' => 10 * 1024 * 1024,
-                    'min_size' => 100,
-                    'label' => 'Terrain (layer.json)',
-                    'allowed_mimes' => ['application/json', 'text/plain'],
-                ],
-                'building' => [
-                    'expected_name' => 'building.geojson',
-                    'required' => false,
-                    'max_size' => 500 * 1024 * 1024,
-                    'min_size' => 100,
-                    'label' => 'Buildings (building.geojson)',
-                    'allowed_mimes' => ['application/json', 'text/plain', 'application/geo+json', 'application/octet-stream'],
-                ],
-                'orthophoto' => [
-                    'expected_name' => 'ortho.tif',
-                    'required' => false,
-                    'max_size' => 10 * 1024 * 1024 * 1024,
-                    'min_size' => 100,
-                    'label' => 'Orthophoto (ortho.tif)',
-                    'allowed_mimes' => ['image/tiff', 'application/octet-stream'],
-                ]
-            ];
+            // 3. Get Validation Rules from centralized method
+            $rules = $this->getValidationRules();
 
             $results = [];
             $hasRequired = false;
@@ -472,5 +406,46 @@ class SubmissionController extends Controller
         $bytes /= pow(1024, $pow);
 
         return round($bytes, $precision) . ' ' . $units[$pow];
+    }
+
+    /**
+     * Get centralized validation rules for file sizes and mimes based on config.
+     */
+    private function getValidationRules()
+    {
+        return [
+            '3d_tileset' => [
+                'expected_name' => 'tileset.json',
+                'required' => true,
+                'max_size' => config('portal.limits.tileset_mb', 50) * 1024 * 1024,
+                'min_size' => 100,
+                'label' => '3D Tileset (tileset.json)',
+                'allowed_mimes' => ['application/json', 'text/plain'],
+            ],
+            'terrain' => [
+                'expected_name' => 'layer.json',
+                'required' => false,
+                'max_size' => config('portal.limits.terrain_mb', 10) * 1024 * 1024,
+                'min_size' => 100,
+                'label' => 'Terrain (layer.json)',
+                'allowed_mimes' => ['application/json', 'text/plain'],
+            ],
+            'buildings' => [
+                'expected_name' => 'building.geojson',
+                'required' => false,
+                'max_size' => config('portal.limits.buildings_mb', 500) * 1024 * 1024,
+                'min_size' => 100,
+                'label' => 'Buildings (building.geojson)',
+                'allowed_mimes' => ['application/json', 'text/plain', 'application/geo+json'],
+            ],
+            'orthophoto' => [
+                'expected_name' => 'ortho.tif',
+                'required' => false,
+                'max_size' => config('portal.limits.orthophoto_gb', 10) * 1024 * 1024 * 1024,
+                'min_size' => 1000,
+                'label' => 'Orthophoto (ortho.tif)',
+                'allowed_mimes' => ['image/tiff', 'application/octet-stream'],
+            ],
+        ];
     }
 }

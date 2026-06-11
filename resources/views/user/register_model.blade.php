@@ -133,17 +133,17 @@
                             <div style="color: #60a5fa; font-weight: bold;">📁 Your_Project_Name/</div>
                             <div style="padding-left: 20px; border-left: 1px dashed rgba(255,255,255,0.1); margin-left: 6px;">
                                 <div style="margin-top: 5px;"><span style="color: #34d399;">├── 📁 3D_Model/</span></div>
-                                <div style="padding-left: 20px; color: var(--text-dim);">├── 📄 tileset.json <span style="font-size: 0.7rem;">(Max 50MB)</span></div>
+                                <div style="padding-left: 20px; color: var(--text-dim);">├── 📄 tileset.json <span style="font-size: 0.7rem;">(Max {{ config('portal.limits.tileset_mb', 50) }}MB)</span></div>
                                 <div style="padding-left: 20px; color: var(--text-dim);">└── 📁 Data/ <span style="font-size: 0.7rem;">(All .b3dm files)</span></div>
                                 
                                 <div style="margin-top: 5px;"><span style="color: #fbbf24;">├── 📁 Terrain/</span></div>
-                                <div style="padding-left: 20px; color: var(--text-dim);">└── 📄 layer.json <span style="font-size: 0.7rem;">(Max 10MB)</span></div>
+                                <div style="padding-left: 20px; color: var(--text-dim);">└── 📄 layer.json <span style="font-size: 0.7rem;">(Max {{ config('portal.limits.terrain_mb', 10) }}MB)</span></div>
                                 
                                 <div style="margin-top: 5px;"><span style="color: #a78bfa;">├── 📁 Buildings/</span></div>
-                                <div style="padding-left: 20px; color: var(--text-dim);">└── 📄 building.geojson <span style="font-size: 0.7rem;">(Max 500MB)</span></div>
+                                <div style="padding-left: 20px; color: var(--text-dim);">└── 📄 building.geojson <span style="font-size: 0.7rem;">(Max {{ config('portal.limits.buildings_mb', 500) }}MB)</span></div>
                                 
                                 <div style="margin-top: 5px;"><span style="color: #f472b6;">└── 📁 Orthophoto/</span></div>
-                                <div style="padding-left: 20px; color: var(--text-dim);">    └── 📄 ortho.tif <span style="font-size: 0.7rem;">(Max 10GB)</span></div>
+                                <div style="padding-left: 20px; color: var(--text-dim);">    └── 📄 ortho.tif <span style="font-size: 0.7rem;">(Max {{ config('portal.limits.orthophoto_gb', 10) }}GB)</span></div>
                             </div>
                         </div>
                         
