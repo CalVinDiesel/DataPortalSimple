@@ -31,31 +31,83 @@ A sleek, simple, and powerful data portal built with Laravel and React for manag
 - PHP 8.2 or higher
 - Composer
 - Node.js & NPM
+- PostgreSQL (Recommended) or MySQL
+- **For Production Server:** Nginx or Apache web server
 
-### 2. Clone and Install
-```bash
-# Install PHP dependencies
-composer install
+---
 
-# Install JS dependencies
-npm install
-npm run build
-```
+### 2. Local Development Setup (For cloning & testing)
+Follow these steps if you are running the system on your personal computer:
 
-### 3. Environment Configuration
-Copy the `.env.example` to `.env` and update your database credentials along with your Cesium Ion token:
-```bash
-cp .env.example .env
-php artisan key:generate
-```
+1. **Clone and Install Dependencies**
+   ```bash
+   composer install
+   npm install
+   ```
+2. **Environment Configuration**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+   *Note: Open the `.env` file and configure your local database credentials. You must also set `VITE_CESIUM_ION_TOKEN` to fully enable the 3D Viewer.*
+3. **Database Setup**
+   ```bash
+   php artisan migrate:fresh --seed
+   ```
+4. **Run the Development Servers**
+   ```bash
+   php artisan serve
+   npm run dev
+   ```
 
-*Note: Make sure to set `VITE_CESIUM_ION_TOKEN` in your `.env` file to fully enable the 3D Viewer.*
+---
 
-### 4. Database Setup
-Once your database is connected, initialize the structure and seed the default accounts:
-```bash
-php artisan migrate:fresh --seed
-```
+### 3. Live Production Server Setup (For Deployment)
+Follow these critical steps when deploying the system to a live server (e.g., Ubuntu/Linux) to ensure performance, security, and feature functionality:
+
+1. **Install Dependencies for Production**
+   Ensure you don't install development packages and compile the frontend assets:
+   ```bash
+   composer install --optimize-autoloader --no-dev
+   npm install
+   npm run build
+   ```
+2. **Secure Environment Configuration**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+   Open your `.env` file and **strictly set the following**:
+   - `APP_ENV=production`
+   - `APP_DEBUG=false` *(Critical: Prevents sensitive error logs from leaking)*
+   - `APP_URL=https://your-domain.com`
+   - Configure Database connections (`DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`)
+   - Set the `VITE_CESIUM_ION_TOKEN` for the 3D viewer.
+3. **Database & Cache Initialization**
+   Run the migrations and cache the configuration for faster loading:
+   ```bash
+   php artisan migrate --force
+   php artisan db:seed --force
+   php artisan optimize
+   ```
+4. **Set Correct Directory Permissions**
+   The web server must be allowed to write to specific directories, or the site will crash with a 500 error:
+   ```bash
+   sudo chown -R www-data:www-data storage bootstrap/cache
+   sudo chmod -R 775 storage bootstrap/cache
+   ```
+   *(Note: Replace `www-data` with your web server user, such as `nginx`, if applicable).*
+5. **Configure the Web Server**
+   Ensure your Nginx or Apache **Document Root** points to the `/public` directory of the project, not the root folder.
+6. **Set Up Background Tasks (Cron Job)**
+   The system has automated daily housekeeping tasks. Add the Laravel scheduler to your server's crontab (`crontab -e`):
+   ```text
+   * * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
+   ```
+7. **Firewall Rules (Crucial for SFTP Scans)**
+   Because the system performs Deep Scans on external 3D Tilesets via `SftpService.php`, ensure your server's firewall allows **Outbound Connections on Port 22** (or the respective SFTP port of your target servers).
+8. **Google Drive Integration**
+   To enable real-time file scanning, refer to the **Google Drive Automated Scanner Integration** section below to configure your `google-service-account.json`.
 
 ---
 
