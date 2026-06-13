@@ -83,6 +83,7 @@ Follow these critical steps when deploying the system to a live server (e.g., Ub
    - `APP_URL=https://your-domain.com`
    - Configure Database connections (`DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`)
    - Set the `VITE_CESIUM_ION_TOKEN` for the 3D viewer.
+   - `BACKUP_DIR=/path/to/your/backups` *(Optional: Custom path for archiving old 3D models during automated housekeeping. If omitted, it defaults to `storage/app/backups` inside your project).*
 3. **Database & Cache Initialization**
    Run the migrations and cache the configuration for faster loading:
    ```bash

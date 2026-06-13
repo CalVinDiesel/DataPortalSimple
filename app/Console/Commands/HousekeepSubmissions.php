@@ -49,11 +49,18 @@ class HousekeepSubmissions extends Command
                         $rawPath = empty($submission->sftp_path) ? '.' : $submission->sftp_path;
                         $remotePath = rtrim(str_replace('\\', '/', $rawPath), '/');
                         
-                        $backupFolder = "backups/submission_{$submission->id}";
+                        // Allow overriding the backup directory via .env
+                        $baseFolder = env('BACKUP_DIR', storage_path('app/backups'));
+                        $disk = Storage::build([
+                            'driver' => 'local',
+                            'root' => $baseFolder,
+                        ]);
+                        
+                        $backupFolder = "submission_{$submission->id}";
                         
                         // 1. Download
-                        $this->info("  -> Downloading files to storage/app/{$backupFolder}");
-                        $backupSuccess = $this->downloadSftpDirectory($sftp, $remotePath, $backupFolder);
+                        $this->info("  -> Downloading files to {$baseFolder}/{$backupFolder}");
+                        $backupSuccess = $this->downloadSftpDirectory($sftp, $remotePath, $backupFolder, $disk);
                         
                         // 2. Delete
                         if ($backupSuccess) {
@@ -89,11 +96,11 @@ class HousekeepSubmissions extends Command
     }
 
     /**
-     * Recursively download files from SFTP to Laravel Local Storage
+     * Recursively download files from SFTP to a specific Laravel Storage Disk
      */
-    private function downloadSftpDirectory(SFTP $sftp, string $remoteDir, string $localDir)
+    private function downloadSftpDirectory(SFTP $sftp, string $remoteDir, string $localDir, \Illuminate\Contracts\Filesystem\Filesystem $disk)
     {
-        Storage::disk('local')->makeDirectory($localDir);
+        $disk->makeDirectory($localDir);
         $files = $sftp->nlist($remoteDir);
         if ($files === false) {
             $this->warn("      [!] Failed to read remote directory: {$remoteDir} (Path might be invalid or permission denied)");
@@ -108,13 +115,13 @@ class HousekeepSubmissions extends Command
             $localPath = $localDir . '/' . $file;
 
             if ($sftp->is_dir($remotePath)) {
-                if (!$this->downloadSftpDirectory($sftp, $remotePath, $localPath)) {
+                if (!$this->downloadSftpDirectory($sftp, $remotePath, $localPath, $disk)) {
                     $allSuccess = false;
                 }
             } else {
                 $data = $sftp->get($remotePath);
                 if ($data !== false) {
-                    Storage::disk('local')->put($localPath, $data);
+                    $disk->put($localPath, $data);
                 } else {
                     $allSuccess = false;
                 }
