@@ -132,8 +132,8 @@
                                 </div>
                                 @endif
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
-                                    <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">3D Tiles URL (Main Model)</label>
-                                    <input type="url" name="processed_data_path" placeholder="Model Viewer URL (https://...)" value="{{ $submission->processed_data_path }}" style="width: 100%; padding: 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white;">
+                                    <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">3D Tiles URL or Ion ID (Main Model)</label>
+                                    <input type="text" name="processed_data_path" placeholder="Model Viewer URL or Asset ID" value="{{ $submission->processed_data_path }}" style="width: 100%; padding: 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: white;">
                                 </div>
                                 <div style="display: flex; flex-direction: column; gap: 2px;">
                                     <label style="font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Terrain URL</label>

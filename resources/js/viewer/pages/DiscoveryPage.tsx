@@ -574,12 +574,8 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
         if (viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.show = false; 
         // viewer.imageryLayers.removeAll(); // RE-ENABLED to prevent render loop crash
 
-        // Remap camera controls: right-click drag = free-look (orbit angle), scroll = zoom
+        // Removing custom camera remaps to restore standard Cesium mouse controls
         const camCtrl = viewer.scene.screenSpaceCameraController;
-        camCtrl.tiltEventTypes = [{ eventType: CameraEventType.RIGHT_DRAG }];
-        camCtrl.zoomEventTypes = [CameraEventType.WHEEL, CameraEventType.PINCH];
-        camCtrl.minimumZoomDistance = 10.0;
-        camCtrl.maximumZoomDistance = 2500.0;
 
         // Apply pitch constraints supported by CesiumNavigation-es6
         const minPitch = CesiumMath.toRadians(-90); // Straight down
@@ -1163,20 +1159,20 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
         // Simple area calculation (approximation using perimeter squared)
         const area = perimeter * perimeter / 16;
 
-        // Calculate centroid using lowest geographic point
+        // Calculate centroid using highest geographic point to float label above
         let lonSum = 0;
         let latSum = 0;
-        let minHeight = Number.POSITIVE_INFINITY;
+        let maxHeight = Number.NEGATIVE_INFINITY;
         const cartos = points.map(p => Cartographic.fromCartesian(p));
         cartos.forEach(c => {
             lonSum += c.longitude;
             latSum += c.latitude;
-            if (c.height < minHeight) minHeight = c.height;
+            if (c.height > maxHeight) maxHeight = c.height;
         });
         const centroid = Cartesian3.fromRadians(
             lonSum / cartos.length,
             latSum / cartos.length,
-            minHeight
+            maxHeight + 2 // Add 2 meters so it hovers nicely above
         );
 
         // Calculate name using persistent counter

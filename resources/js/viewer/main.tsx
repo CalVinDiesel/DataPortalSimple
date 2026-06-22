@@ -2,11 +2,11 @@
 import './cesium-wrapper'; // Ensure the wrapper sets the global first
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.tsx';
+import App from './App';
 
 if (typeof window !== 'undefined') {
-    // USE CDN for base assets (Textures, Skybox, etc) to ensure they never 404 in dev
-    (window as any).CESIUM_BASE_URL = 'https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/';
+    // Serve Cesium directly from Laravel's public directory to prevent Web Worker CORS blocks
+    (window as any).CESIUM_BASE_URL = '/cesium/';
 }
 
 console.log('🚀 main.tsx: Cesium global initialized');

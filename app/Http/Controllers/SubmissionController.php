@@ -124,7 +124,7 @@ class SubmissionController extends Controller
         $request->validate([
             'project_name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'processed_data_path' => 'nullable|url',
+            'processed_data_path' => 'nullable|string',
             'terrain_path' => 'nullable|url',
             'building_path' => 'nullable|url',
             'orthophoto_path' => 'nullable|url',

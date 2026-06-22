@@ -81,12 +81,12 @@ interface EntityRefs {
 function Sidebar({ isOpen, onToggle, viewer, siteTitle = 'SITE', tilesetUrl, drawnMeasurements, onDeleteMeasurement, onPanToMeasurement, userAnnotations, onDeleteAnnotation, onPanToAnnotation, onEditItem, onTilesetLoad }: SidebarProps) {
     const handleScreenshot = () => {
         if (!viewer) return;
-        
+
         // Ensure the scene is rendered before capturing
         viewer.render();
         const canvas = viewer.canvas;
         const image = canvas.toDataURL("image/png");
-        
+
         const link = document.createElement('a');
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
         link.download = `${siteTitle.replace(/\s+/g, '_')}_${timestamp}.png`;
@@ -217,9 +217,15 @@ function Sidebar({ isOpen, onToggle, viewer, siteTitle = 'SITE', tilesetUrl, dra
 
         const loadData = async () => {
             try {
-                const osmBuildings = await (tilesetUrl ? 
-                    Cesium3DTileset.fromUrl(tilesetUrl) : 
-                    Cesium3DTileset.fromIonAssetId(96188));
+                let osmBuildings;
+                if (tilesetUrl && /^\d+$/.test(tilesetUrl)) {
+                    // If the user typed a pure number (like 4944451) into the URL box, treat it as a Cesium Ion Asset ID
+                    osmBuildings = await Cesium3DTileset.fromIonAssetId(parseInt(tilesetUrl, 10));
+                } else {
+                    osmBuildings = await (tilesetUrl ?
+                        Cesium3DTileset.fromUrl(tilesetUrl) :
+                        Cesium3DTileset.fromIonAssetId(96188)); // Default fallback
+                }
 
                 viewer.scene.primitives.add(osmBuildings);
                 entityRefs.current.models['3DModel'] = osmBuildings;
@@ -421,7 +427,7 @@ function Sidebar({ isOpen, onToggle, viewer, siteTitle = 'SITE', tilesetUrl, dra
             <div className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
                 <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h2 className="sidebar-title" style={{ margin: 0 }}>{siteTitle}</h2>
-                    <button 
+                    <button
                         onClick={handleScreenshot}
                         className="screenshot-button"
                         title="Take Screenshot"

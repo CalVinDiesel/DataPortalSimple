@@ -39,8 +39,8 @@
                 </h3>
 
                 <div class="form-group">
-                    <label>3D Tiles URL (tileset.json) <span style="color: #ef4444">*</span></label>
-                    <input type="url" name="processed_data_path" placeholder="https://example.com/tiles/tileset.json" value="{{ old('processed_data_path') }}" autocomplete="off">
+                    <label>3D Tiles URL (tileset.json) or Cesium Ion ID <span style="color: #ef4444">*</span></label>
+                    <input type="text" name="processed_data_path" placeholder="https://example.com/tiles/tileset.json or Asset ID" value="{{ old('processed_data_path') }}" autocomplete="off">
                 </div>
 
                 <div class="form-group">
