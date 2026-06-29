@@ -3,10 +3,13 @@ import {
     Viewer,
     Entity,
     Cesium3DTileset,
+    Model,
     HeadingPitchRange,
     Math as CesiumMath,
     Resource,
     DefaultProxy,
+    Transforms,
+    Cartesian3
 } from 'cesium';
 import {
     ChevronLeft,
@@ -218,26 +221,79 @@ function Sidebar({ isOpen, onToggle, viewer, siteTitle = 'SITE', tilesetUrl, dra
         const loadData = async () => {
             try {
                 let osmBuildings;
-                if (tilesetUrl && /^\d+$/.test(tilesetUrl)) {
-                    // If the user typed a pure number (like 4944451) into the URL box, treat it as a Cesium Ion Asset ID
+
+                if (!tilesetUrl) {
+                    osmBuildings = await Cesium3DTileset.fromIonAssetId(96188); // Default fallback
+                } else if (/^\d+$/.test(tilesetUrl)) {
+                    // Pure number -> Cesium Ion Asset ID
                     osmBuildings = await Cesium3DTileset.fromIonAssetId(parseInt(tilesetUrl, 10));
+                } else if (tilesetUrl.startsWith('[')) {
+                    // It's an array of files! (Direct multiple upload)
+                    try {
+                        const urls = JSON.parse(tilesetUrl);
+                        let firstModel = null;
+                        
+                        // Load them sequentially or all at once? Let's do all at once with Promise.all
+                        const position = Cartesian3.fromDegrees(116.0753, 5.9750, 0); // Default Sabah
+                        const modelMatrix = Transforms.eastNorthUpToFixedFrame(position);
+                        
+                        const models = await Promise.all(urls.map(url => {
+                            if (url.endsWith('.glb') || url.endsWith('.gltf')) {
+                                return Model.fromGltfAsync({ url, modelMatrix });
+                            }
+                            // Fallback if array contains tileset json
+                            return Cesium3DTileset.fromUrl(url);
+                        }));
+                        
+                        // Add all to scene
+                        models.forEach(model => viewer.scene.primitives.add(model));
+                        
+                        osmBuildings = models[0]; // Keep the first one as reference for zooming/events
+                    } catch (e) {
+                        console.error("Failed to parse multiple URLs array", e);
+                        osmBuildings = await Cesium3DTileset.fromIonAssetId(96188);
+                    }
+                } else if (tilesetUrl.endsWith('.glb') || tilesetUrl.endsWith('.gltf')) {
+                    // It's a converted raw model from our pipeline
+                    const position = Cartesian3.fromDegrees(116.0753, 5.9750, 0); // Default Sabah coordinates
+                    const modelMatrix = Transforms.eastNorthUpToFixedFrame(position);
+                    osmBuildings = await Model.fromGltfAsync({
+                        url: tilesetUrl,
+                        modelMatrix: modelMatrix
+                    });
                 } else {
-                    osmBuildings = await (tilesetUrl ?
-                        Cesium3DTileset.fromUrl(tilesetUrl) :
-                        Cesium3DTileset.fromIonAssetId(96188)); // Default fallback
+                    // Assume it's a tileset.json URL from SFTP
+                    osmBuildings = await Cesium3DTileset.fromUrl(tilesetUrl);
                 }
 
-                viewer.scene.primitives.add(osmBuildings);
+                // If it wasn't an array, we just add the single primitive
+                if (!tilesetUrl || !tilesetUrl.startsWith('[')) {
+                    viewer.scene.primitives.add(osmBuildings);
+                }
+                
                 entityRefs.current.models['3DModel'] = osmBuildings;
+
+                if (osmBuildings instanceof Cesium3DTileset && osmBuildings.tileFailed) {
+                    osmBuildings.tileFailed.addEventListener((error: any) => {
+                        console.error('❌ Sidebar: Tile failed to load:', error);
+                    });
+                }
 
                 // Smart camera retry - Keep trying to zoom every second until the model is geographically placed
                 const zoomInterval = setInterval(() => {
-                    if (osmBuildings.boundingSphere && osmBuildings.boundingSphere.radius > 0) {
-                        const radius = osmBuildings.boundingSphere.radius;
-                        // Use a 4.0 multiplier to ensure we see the whole "Islands" of data
-                        viewer.zoomTo(osmBuildings, new HeadingPitchRange(0, CesiumMath.toRadians(-30), radius * 4.0));
-                        clearInterval(zoomInterval); // Success! Stop trying.
-                        console.log('📍 Sidebar: Persistence Wide-Zoom Success with Radius:', radius);
+                    try {
+                        if (osmBuildings.boundingSphere && osmBuildings.boundingSphere.radius > 0) {
+                            const radius = osmBuildings.boundingSphere.radius;
+                            viewer.camera.flyToBoundingSphere(osmBuildings.boundingSphere, {
+                                offset: new HeadingPitchRange(0, CesiumMath.toRadians(-30), radius * 4.0)
+                            });
+                            clearInterval(zoomInterval); // Success! Stop trying.
+                        } else if (osmBuildings instanceof Cesium3DTileset) {
+                            viewer.zoomTo(osmBuildings);
+                            clearInterval(zoomInterval); // Success for tileset!
+                        }
+                    } catch (e) {
+                        // Bounding sphere getter might throw if geometry is still calculating
                     }
                 }, 1000);
 
@@ -246,13 +302,20 @@ function Sidebar({ isOpen, onToggle, viewer, siteTitle = 'SITE', tilesetUrl, dra
 
                 // Wait for the actual tiles to finish rendering on screen before dismissing the full-screen loader
                 let hasDismissedLoader = false;
-                osmBuildings.initialTilesLoaded.addEventListener(() => {
-                    if (!hasDismissedLoader && onTilesetLoad) {
-                        hasDismissedLoader = true;
+                if (osmBuildings instanceof Cesium3DTileset && osmBuildings.initialTilesLoaded) {
+                    osmBuildings.initialTilesLoaded.addEventListener(() => {
+                        if (!hasDismissedLoader && onTilesetLoad) {
+                            hasDismissedLoader = true;
+                            onTilesetLoad(osmBuildings);
+                            console.log('✅ Sidebar: Initial tiles visually rendered');
+                        }
+                    });
+                } else {
+                    if (onTilesetLoad) {
                         onTilesetLoad(osmBuildings);
-                        console.log('✅ Sidebar: Initial tiles visually rendered');
+                        console.log('✅ Sidebar: Model loaded instantly');
                     }
-                });
+                }
 
                 // Fallback: If the proxy is extremely slow, dismiss loader after 10 seconds anyway so user isn't permanently locked out
                 setTimeout(() => {

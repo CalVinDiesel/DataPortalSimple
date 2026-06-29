@@ -22,11 +22,10 @@ class SubmissionController extends Controller
             'image_metadata' => 'required|in:EXIF,POS,EXIF & POS',
             'capture_date' => 'nullable|date',
             'google_drive_link' => [
-                'required_without:sftp_host',
                 'nullable',
                 'url',
                 function ($attribute, $value, $fail) {
-                    if (!$value) return; // Skip if empty (SFTP used instead)
+                    if (!$value) return; // Skip if empty
 
                     $isGoogle = str_contains($value, 'drive.google.com');
                     $isOneDrive = str_contains($value, 'onedrive.live.com') || str_contains($value, 'sharepoint.com') || str_contains($value, '1drv.ms');
@@ -88,7 +87,7 @@ class SubmissionController extends Controller
                     }
                 },
             ],
-            'sftp_host' => 'required_without:google_drive_link|nullable|string|max:255',
+            'sftp_host' => 'nullable|string|max:255',
             'sftp_port' => 'nullable|integer',
             'sftp_username' => 'required_with:sftp_host|nullable|string|max:255',
             'sftp_password' => 'required_with:sftp_host|nullable|string|max:255',
@@ -136,12 +135,12 @@ class SubmissionController extends Controller
             'sftp_path' => 'nullable|string',
         ]);
 
-        // Validation: Must provide either a Direct URL or a Transfer Link
-        if (!$request->processed_data_path && !$request->google_drive_link && !$request->sftp_host) {
-            return back()->withErrors(['processed_data_path' => 'Please provide either a Direct URL or a transfer link (Google Drive/SFTP).'])->withInput();
+        // Validation: Must provide either a Direct URL or a Transfer Link or a File
+        if (!$request->processed_data_path && !$request->google_drive_link && !$request->sftp_host && !$request->hasFile('raw_model_file')) {
+            return back()->withErrors(['processed_data_path' => 'Please provide either a Direct URL, a transfer link, or upload a model file.'])->withInput();
         }
 
-        Submission::create([
+        $submission = Submission::create([
             'user_id' => Auth::id(),
             'project_name' => $request->project_name,
             'description' => $request->description,
@@ -162,7 +161,85 @@ class SubmissionController extends Controller
             'camera_config' => 'Single-Lens',
             'category' => 'External Registration',
             'image_metadata' => 'EXIF',
+            'processed_data_path' => $request->processed_data_path,
         ]);
+
+        // Handle Direct Upload Conversion
+        if ($request->hasFile('raw_model_file')) {
+            $files = $request->file('raw_model_file');
+            if (!is_array($files)) {
+                $files = [$files];
+            }
+
+            $modelDir = public_path("models/{$submission->id}");
+            if (!file_exists($modelDir)) {
+                mkdir($modelDir, 0777, true);
+            }
+
+            $processedUrls = [];
+            $objFilesToConvert = [];
+            $plyFilesToConvert = [];
+
+            // 1. Move all files first (so .obj files have access to their .mtl and .jpg friends)
+            foreach ($files as $file) {
+                $extension = strtolower($file->getClientOriginalExtension());
+                // Use original name so textures link correctly
+                $originalName = $file->getClientOriginalName();
+                // If it uploaded from a folder, getClientOriginalName() might include the path, so just take basename
+                $filename = basename($originalName);
+                
+                $rawPath = $modelDir . '/' . $filename;
+                $file->move($modelDir, $filename);
+
+                if ($extension === 'obj') {
+                    $objFilesToConvert[] = [
+                        'rawPath' => $rawPath,
+                        'glbPath' => $modelDir . '/' . str_replace('.obj', '.glb', $filename),
+                        'filename' => $filename
+                    ];
+                } elseif ($extension === 'ply') {
+                    $plyFilesToConvert[] = [
+                        'rawPath' => $rawPath,
+                        'tilesetDir' => $modelDir . '/tileset_' . md5($filename),
+                        'filename' => $filename
+                    ];
+                } elseif ($extension === 'glb' || $extension === 'gltf') {
+                    $processedUrls[] = "/models/{$submission->id}/{$filename}";
+                }
+            }
+
+            // 2. Convert all .obj files now that all files are present in the folder
+            foreach ($objFilesToConvert as $obj) {
+                try {
+                    exec("npx obj2gltf -i \"{$obj['rawPath']}\" -o \"{$obj['glbPath']}\"");
+                    $glbFilename = str_replace('.obj', '.glb', $obj['filename']);
+                    $processedUrls[] = "/models/{$submission->id}/{$glbFilename}";
+                } catch (\Exception $e) {
+                    \Log::error("OBJ Conversion Failed: " . $e->getMessage());
+                }
+            }
+
+            // 3. Convert all .ply Gaussian Splat files into 3D Tiles
+            foreach ($plyFilesToConvert as $ply) {
+                try {
+                    if (!file_exists($ply['tilesetDir'])) {
+                        mkdir($ply['tilesetDir'], 0777, true);
+                    }
+                    exec("npx 3dgs-ply-3dtiles-converter \"{$ply['rawPath']}\" \"{$ply['tilesetDir']}\" --no-open-inspector --coordinate \"[5.9750,116.0753,0]\"");
+                    
+                    $tilesetFolderName = basename($ply['tilesetDir']);
+                    $processedUrls[] = "/models/{$submission->id}/{$tilesetFolderName}/tileset.json";
+                } catch (\Exception $e) {
+                    \Log::error("PLY Conversion Failed: " . $e->getMessage());
+                }
+            }
+
+            if (!empty($processedUrls)) {
+                $submission->update([
+                    'processed_data_path' => count($processedUrls) > 1 ? json_encode($processedUrls) : $processedUrls[0]
+                ]);
+            }
+        }
 
         return redirect()->route('dashboard')->with('success', 'External model registered successfully. It will appear on your dashboard once verified by the Admin.');
     }
