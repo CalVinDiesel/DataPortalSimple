@@ -26,4 +26,5 @@ Thumbs.db
 public/web.config
 /public/cesium
 /public/models
+/public/models/*
 /public/test.php

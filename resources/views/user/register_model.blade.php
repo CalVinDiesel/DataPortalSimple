@@ -7,7 +7,7 @@
         <p>Provide your existing 3D tileset URLs to use our analysis tools</p>
     </div>
 
-    <form method="POST" action="{{ route('user.register_model.submit') }}">
+    <form method="POST" action="{{ route('user.register_model.submit') }}" enctype="multipart/form-data">
         @csrf
         <div class="form-group">
             <label for="project_name">Project Name *</label>
@@ -22,7 +22,10 @@
         <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px;">
             <label style="display: block; font-size: 0.8rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 15px;">Data Source Method</label>
             <div style="display: flex; gap: 10px;">
-                <button type="button" id="btnUrl" onclick="switchMethod('url')" style="flex: 1; padding: 12px; background: var(--primary); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                <button type="button" id="btnUpload" onclick="switchMethod('upload')" style="flex: 1; padding: 12px; background: var(--primary); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                    Direct File Upload
+                </button>
+                <button type="button" id="btnUrl" onclick="switchMethod('url')" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; cursor: pointer; font-weight: 600; transition: all 0.3s;">
                     I have a Direct URL
                 </button>
                 <button type="button" id="btnFiles" onclick="switchMethod('files')" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; cursor: pointer; font-weight: 600; transition: all 0.3s;">
@@ -31,8 +34,154 @@
             </div>
         </div>
 
+        <!-- SECTION 0: UPLOAD DIRECT FILE -->
+        <div id="sectionUpload">
+            <div style="background: rgba(16, 185, 129, 0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 25px;">
+                <h3 style="font-size: 0.75rem; color: #10b981; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                    Upload 3D Model File
+                </h3>
+                <div class="form-group">
+                    <div id="upload_ui_box" 
+                         ondragover="handleDragOver(event)" 
+                         ondragleave="handleDragLeave(event)" 
+                         ondrop="handleDrop(event)"
+                         onclick="document.getElementById('file_input').click()"
+                         style="border: 2px dashed rgba(16, 185, 129, 0.5); padding: 40px 20px; text-align: center; border-radius: 12px; background: rgba(0,0,0,0.2); transition: all 0.3s ease; cursor: pointer;">
+                        <svg style="width: 48px; height: 48px; color: #10b981; margin: 0 auto 15px auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        <h4 style="color: white; margin-bottom: 10px; font-size: 1.1rem;">Upload your 3D Models</h4>
+                        <p style="color: #9ca3af; font-size: 0.85rem; margin-bottom: 5px;">Drag & Drop files or dataset folders here</p>
+                        <p style="color: #9ca3af; font-size: 0.75rem; opacity: 0.7;">(or click anywhere in this box to browse files)</p>
+                        
+                        <p id="file_count_display" style="color: #10b981; margin-top: 20px; font-weight: bold; display: none; font-size: 0.9rem;"></p>
+                        <ul id="file_list_container" style="list-style: none; padding: 0; margin-top: 15px; max-height: 200px; overflow-y: auto; text-align: left;"></ul>
+
+                        <input type="file" id="file_input" multiple style="display: none;" onchange="handleFileSelect(this)">
+                        <input type="file" id="folder_input" multiple webkitdirectory directory style="display: none;" onchange="handleFileSelect(this)">
+                    </div>
+
+                    <script>
+                        const box = document.getElementById('upload_ui_box');
+                        const display = document.getElementById('file_count_display');
+                        const fileInput = document.getElementById('file_input');
+                        const folderInput = document.getElementById('folder_input');
+                        const listContainer = document.getElementById('file_list_container');
+
+                        // Global DataTransfer to hold all files across multiple drops/clicks
+                        let globalDt = new DataTransfer();
+
+                        function formatBytes(bytes, decimals = 2) {
+                            if (bytes === 0) return '0 Bytes';
+                            const k = 1024;
+                            const dm = decimals < 0 ? 0 : decimals;
+                            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                            const i = Math.floor(Math.log(bytes) / Math.log(k));
+                            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+                        }
+
+                        function renderFileList() {
+                            listContainer.innerHTML = '';
+                            
+                            for (let i = 0; i < globalDt.files.length; i++) {
+                                const f = globalDt.files[i];
+                                listContainer.innerHTML += `
+                                    <li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.05); margin-bottom: 5px; border-radius: 6px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                                            <svg style="width: 20px; color: #9ca3af; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                            <span style="color: white; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${f.name}</span>
+                                            <span style="color: #9ca3af; font-size: 0.75rem;">${formatBytes(f.size)}</span>
+                                        </div>
+                                        <button type="button" onclick="event.stopPropagation(); removeFile(${i})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 5px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='none'">
+                                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                        </button>
+                                    </li>
+                                `;
+                            }
+                            
+                            // Assign to the hidden input
+                            fileInput.files = globalDt.files;
+                            fileInput.name = 'raw_model_file[]';
+                            folderInput.name = ''; // Disable folder input since we merged it
+                            
+                            const count = globalDt.files.length;
+                            if (count > 0) {
+                                display.style.display = 'block';
+                                display.innerHTML = `✅ <b>${count}</b> file(s) loaded and ready to register!`;
+                                box.style.borderColor = '#10b981';
+                                box.style.background = 'rgba(16, 185, 129, 0.05)';
+                            } else {
+                                display.style.display = 'none';
+                                box.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+                                box.style.background = 'rgba(0,0,0,0.2)';
+                            }
+                        }
+
+                        function removeFile(index) {
+                            globalDt.items.remove(index);
+                            renderFileList();
+                        }
+
+                        // Handle click browsing
+                        function handleFileSelect(input) {
+                            for (let i = 0; i < input.files.length; i++) {
+                                globalDt.items.add(input.files[i]);
+                            }
+                            renderFileList();
+                        }
+
+                        // Drag and Drop handlers
+                        function handleDragOver(e) {
+                            e.preventDefault();
+                            box.style.borderColor = '#3b82f6';
+                            box.style.background = 'rgba(59, 130, 246, 0.1)';
+                        }
+
+                        function handleDragLeave(e) {
+                            e.preventDefault();
+                            renderFileList(); // Resets color based on file count
+                        }
+
+                        async function handleDrop(e) {
+                            e.preventDefault();
+                            display.style.display = 'block';
+                            display.innerHTML = `⏳ Processing dropped items...`;
+                            box.style.borderColor = '#f59e0b';
+
+                            const items = e.dataTransfer.items;
+
+                            async function getFilesFromEntry(entry) {
+                                if (entry.isFile) {
+                                    const file = await new Promise(resolve => entry.file(resolve));
+                                    globalDt.items.add(file);
+                                } else if (entry.isDirectory) {
+                                    const dirReader = entry.createReader();
+                                    const entries = await new Promise(resolve => dirReader.readEntries(resolve));
+                                    for (let i = 0; i < entries.length; i++) {
+                                        await getFilesFromEntry(entries[i]);
+                                    }
+                                }
+                            }
+
+                            for (let i = 0; i < items.length; i++) {
+                                const item = items[i].webkitGetAsEntry();
+                                if (item) {
+                                    await getFilesFromEntry(item);
+                                }
+                            }
+
+                            renderFileList();
+                        }
+                    </script>
+                </div>
+                <div style="margin-top: 15px; padding: 12px 16px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; display: flex; gap: 12px; align-items: center;">
+                    <div style="color: var(--text); font-size: 0.85rem;">
+                        If it is a raw model (like .obj), our server will automatically convert it to a web-ready format.
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- SECTION 1: DIRECT URLS -->
-        <div id="sectionUrl">
+        <div id="sectionUrl" style="display: none;">
             <div style="background: rgba(59, 130, 246, 0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2); margin-bottom: 25px;">
                 <h3 style="font-size: 0.75rem; color: #3b82f6; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
                     External Data Links
@@ -225,44 +374,57 @@
 </style>
 
 <script>
-    let currentMethod = 'url';
+    let currentMethod = 'upload';
     let isFileTransferVerified = false;
 
     function switchMethod(method) {
         currentMethod = method;
+        const btnUpload = document.getElementById('btnUpload');
         const btnUrl = document.getElementById('btnUrl');
         const btnFiles = document.getElementById('btnFiles');
+        
+        const sectionUpload = document.getElementById('sectionUpload');
         const sectionUrl = document.getElementById('sectionUrl');
         const sectionFiles = document.getElementById('sectionFiles');
+        
         const btnSubmit = document.getElementById('btnSubmit');
 
-        if (method === 'url') {
+        [btnUpload, btnUrl, btnFiles].forEach(btn => {
+            btn.style.background = 'rgba(255,255,255,0.05)';
+            btn.style.border = '1px solid rgba(255,255,255,0.1)';
+        });
+        
+        [sectionUpload, sectionUrl, sectionFiles].forEach(sec => sec.style.display = 'none');
+
+        if (method === 'upload') {
+            btnUpload.style.background = 'var(--primary)';
+            btnUpload.style.border = 'none';
+            sectionUpload.style.display = 'block';
+            
+            btnSubmit.disabled = false;
+            btnSubmit.style.opacity = '1';
+            btnSubmit.style.cursor = 'pointer';
+        } else if (method === 'url') {
             btnUrl.style.background = 'var(--primary)';
             btnUrl.style.border = 'none';
-            btnFiles.style.background = 'rgba(255,255,255,0.05)';
-            btnFiles.style.border = '1px solid rgba(255,255,255,0.1)';
-            
             sectionUrl.style.display = 'block';
-            sectionFiles.style.display = 'none';
 
-            // URLs don't block submit by default
             btnSubmit.disabled = false;
             btnSubmit.style.opacity = '1';
             btnSubmit.style.cursor = 'pointer';
         } else {
             btnFiles.style.background = '#10b981';
             btnFiles.style.border = 'none';
-            btnUrl.style.background = 'rgba(255,255,255,0.05)';
-            btnUrl.style.border = '1px solid rgba(255,255,255,0.1)';
-            
-            sectionUrl.style.display = 'none';
             sectionFiles.style.display = 'block';
 
-            // Lock submit button until verified if choosing G-Drive files or SFTP
             if (!isFileTransferVerified) {
                 btnSubmit.disabled = true;
                 btnSubmit.style.opacity = '0.5';
                 btnSubmit.style.cursor = 'not-allowed';
+            } else {
+                btnSubmit.disabled = false;
+                btnSubmit.style.opacity = '1';
+                btnSubmit.style.cursor = 'pointer';
             }
         }
     }
