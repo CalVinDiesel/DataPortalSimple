@@ -1789,14 +1789,20 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
                                         const viewer = viewerRef.current;
 
                                         if (loadedTileset) {
-                                            viewer.zoomTo(
-                                                loadedTileset,
-                                                new HeadingPitchRange(
-                                                    CesiumMath.toRadians(0.0),
-                                                    CesiumMath.toRadians(-20.0),
-                                                    loadedTileset.boundingSphere ? loadedTileset.boundingSphere.radius * 2.5 : 800.0
-                                                )
-                                            );
+                                            if (loadedTileset.boundingSphere) {
+                                                viewer.camera.flyToBoundingSphere(loadedTileset.boundingSphere, {
+                                                    offset: new HeadingPitchRange(
+                                                        CesiumMath.toRadians(0.0),
+                                                        CesiumMath.toRadians(-20.0),
+                                                        loadedTileset.boundingSphere.radius * 2.5
+                                                    )
+                                                });
+                                            } else {
+                                                viewer.zoomTo(
+                                                    loadedTileset,
+                                                    new HeadingPitchRange(CesiumMath.toRadians(0.0), CesiumMath.toRadians(-20.0), 800.0)
+                                                );
+                                            }
                                         } else {
                                             // Fallback to default location
                                             viewer.camera.flyTo({

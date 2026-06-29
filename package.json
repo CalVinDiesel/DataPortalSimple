@@ -21,7 +21,7 @@
         "vite-plugin-cesium": "^1.2.23"
     },
     "dependencies": {
-        "3dgs-ply-3dtiles-converter": "^0.5.6",
+        "3dgs-ply-3dtiles-converter": "^0.5.11",
         "cesium": "^1.140.0",
         "cesium-navigation-es6": "^3.0.9",
         "lucide-react": "^1.7.0",
