@@ -26,7 +26,7 @@
                     Direct File Upload
                 </button>
                 <button type="button" id="btnUrl" onclick="switchMethod('url')" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; cursor: pointer; font-weight: 600; transition: all 0.3s;">
-                    I have a Direct URL
+                    Direct URL
                 </button>
                 <button type="button" id="btnFiles" onclick="switchMethod('files')" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; cursor: pointer; font-weight: 600; transition: all 0.3s;">
                     Send Files (G-Drive/SFTP)

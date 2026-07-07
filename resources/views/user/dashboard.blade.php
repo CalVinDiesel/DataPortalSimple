@@ -82,8 +82,23 @@
                                 @if($submission->processed_data_path)
                                     <a href="{{ route('user.view', $submission) }}" target="_blank" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.8rem; width: auto; margin: 0; background: var(--secondary); user-select: none;">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 256 256" style="margin-right: 6px;"><path d="M247.31,124.76c-.35-.79-8.82-19.74-27.65-38.57C194.57,61.11,162.88,48,128,48S61.43,61.11,36.34,86.19c-18.83,18.83-27.3,37.78-27.65,38.57a16,16,0,0,0,0,10.48c.35.79,8.82,19.74,27.65,38.57C61.43,194.89,93.12,208,128,208s66.57-13.11,91.66-38.19c18.83-18.83,27.3-37.78,27.65-38.57A16,16,0,0,0,247.31,124.76ZM128,192c-30.78,0-59.03-10.87-80-30.63a123.44,123.44,0,0,1-21-24.18c.06-.12,5.84-11.9,16.89-23.33C64.93,93.1,95.17,80,128,80s63.07,13.1,84.11,33.86c11.05,11.43,16.83,23.21,16.89,23.33a123.44,123.44,0,0,1-21,24.18C187.03,181.13,158.78,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"></path></svg>
-                                        <span>View Model</span>
+                                        <span>View in Map</span>
                                     </a>
+                                    
+                                    @php
+                                        $hasPlyFile = false;
+                                        $folderPath = public_path('models/' . $submission->id);
+                                        if (is_dir($folderPath) && !empty(glob($folderPath . '/*.ply'))) {
+                                            $hasPlyFile = true;
+                                        }
+                                    @endphp
+                                    
+                                    @if($hasPlyFile || str_contains(strtolower($submission->output_category), '3dgs') || str_contains(strtolower($submission->project_name), '3dgs') || str_contains(strtolower($submission->project_name), 'splat') || str_contains(strtolower($submission->processed_data_path), '.ply'))
+                                    <a href="{{ route('user.three_splat', $submission) }}" target="_blank" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.8rem; width: auto; margin: 0; background: #6366f1; user-select: none;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 256 256" style="margin-right: 6px;"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-39.2,22.44-81.25-44.47ZM40,80.18,120,36.38v89l-80,43.76ZM136,219.62V130.6l80-43.76v89Z"></path></svg>
+                                        <span>View in Three.js</span>
+                                    </a>
+                                    @endif
 
                                     <button class="btn btn-primary geoExplorerBtn"
                                             data-url="{{ $submission->processed_data_path }}"

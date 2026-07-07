@@ -29,8 +29,20 @@
         // Ensure tileset_url is in query params for the React app to consume
         if (!window.location.search.includes('tileset_url=')) {
             const url = new URL(window.location.href);
-            url.searchParams.set('tileset_url', "{{ $submission->processed_data_path }}");
+            url.searchParams.set('tileset_url', '{!! $submission->processed_data_path !!}');
             url.searchParams.set('title', "{{ $submission->project_name }}");
+            
+            @php
+                $folderPath = public_path('models/' . $submission->id);
+                if (is_dir($folderPath)) {
+                    $files = glob($folderPath . '/*.ply');
+                    if (!empty($files)) {
+                        $plyFile = '/models/' . $submission->id . '/' . basename($files[0]);
+                        echo "url.searchParams.set('ply_url', '{$plyFile}');";
+                    }
+                }
+            @endphp
+            
             window.history.replaceState({}, '', url);
         }
         @endif

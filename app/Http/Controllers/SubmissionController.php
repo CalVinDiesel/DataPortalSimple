@@ -220,17 +220,18 @@ class SubmissionController extends Controller
             }
 
             // 3. Convert all .ply Gaussian Splat files into 3D Tiles
-            foreach ($plyFilesToConvert as $ply) {
+            if (count($plyFilesToConvert) > 0) {
                 try {
-                    if (!file_exists($ply['tilesetDir'])) {
-                        mkdir($ply['tilesetDir'], 0777, true);
-                    }
-                    exec("npx 3dgs-ply-3dtiles-converter \"{$ply['rawPath']}\" \"{$ply['tilesetDir']}\" --no-open-inspector --coordinate \"[5.9750,116.0753,0]\"");
+                    $tilesetDir = $modelDir . '/tileset_merged';
+                    $nodeScript = base_path('process_splat_upload.js');
                     
-                    $tilesetFolderName = basename($ply['tilesetDir']);
-                    $processedUrls[] = "/models/{$submission->id}/{$tilesetFolderName}/tileset.json";
+                    // Run the Node.js pipeline which automatically handles 1 or multiple .ply files
+                    // It merges them, converts them, and applies the exact transform matrix needed.
+                    exec("node \"{$nodeScript}\" \"{$modelDir}\" \"{$tilesetDir}\"");
+                    
+                    $processedUrls[] = "/models/{$submission->id}/tileset_merged/tileset.json";
                 } catch (\Exception $e) {
-                    \Log::error("PLY Conversion Failed: " . $e->getMessage());
+                    \Log::error("PLY Conversion/Merge Failed: " . $e->getMessage());
                 }
             }
 

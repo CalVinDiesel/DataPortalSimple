@@ -24,13 +24,14 @@ import {
     HeadingPitchRange,
     Math as CesiumMath,
     DirectionalLight,
+    JulianDate,
 } from 'cesium';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import CesiumNavigation from 'cesium-navigation-es6';
 import { ArrowLeft } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
-
+import ChatbotWidget from '../components/ChatbotWidget';
 
 import MeasurementToolbar from '../components/MeasurementToolbar';
 import AnnotationToolbar from '../components/AnnotationToolbar';
@@ -42,6 +43,13 @@ import './DiscoveryPage.css';
 
 // Set your Cesium Ion access token
 Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ION_TOKEN;
+
+const raisePoints = (pts: Cartesian3[], offset = 0.5) => {
+    return pts.map(p => {
+        const cart = Cartographic.fromCartesian(p);
+        return Cartesian3.fromRadians(cart.longitude, cart.latitude, cart.height + offset);
+    });
+};
 
 // Supervisor's Tilesets Data removed, using dynamic fetching instead
 
@@ -250,7 +258,79 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
         name: string;
     } | null>(null);
 
-
+    // Global API for Chatbot (The Bridge)
+    useEffect(() => {
+        (window as any).ViewerAPI = {
+            flyTo: (lat: number, lon: number, height: number = 500) => {
+                if (viewerRef.current) {
+                    viewerRef.current.camera.flyTo({
+                        destination: Cartesian3.fromDegrees(lon, lat, height),
+                        duration: 2.0
+                    });
+                }
+            },
+            resetCamera: () => {
+                if (viewerRef.current && loadedTileset) {
+                    viewerRef.current.zoomTo(loadedTileset, new HeadingPitchRange(0, -0.5, 0));
+                }
+            },
+            showHighestPoint: () => {
+                if (!viewerRef.current) return;
+                viewerRef.current.entities.add({
+                    position: Cartesian3.fromDegrees(116.113, 5.918, 500), // Mock coordinate near Penampang
+                    point: { pixelSize: 20, color: Color.RED, outlineColor: Color.WHITE, outlineWidth: 3 },
+                    label: { text: 'Highest Point (300m)', verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, -25) }
+                });
+                viewerRef.current.camera.flyTo({
+                    destination: Cartesian3.fromDegrees(116.113, 5.918, 1500),
+                    duration: 2.0
+                });
+            },
+            showFloodRisk: (level: string) => {
+                if (!viewerRef.current) return;
+                let riskColor = Color.BLUE.withAlpha(0.3);
+                if (level.toLowerCase() === 'high') riskColor = Color.RED.withAlpha(0.4);
+                if (level.toLowerCase() === 'moderate') riskColor = Color.ORANGE.withAlpha(0.4);
+                
+                viewerRef.current.entities.add({
+                    polygon: {
+                        hierarchy: new PolygonHierarchy(Cartesian3.fromDegreesArray([
+                            116.10, 5.91,
+                            116.12, 5.91,
+                            116.12, 5.93,
+                            116.10, 5.93
+                        ])),
+                        material: riskColor,
+                        height: 50 // clamp slightly above ground
+                    }
+                });
+                viewerRef.current.camera.flyTo({
+                    destination: Cartesian3.fromDegrees(116.11, 5.92, 3000),
+                    duration: 2.0
+                });
+            },
+            showPOIs: () => {
+                if (!viewerRef.current) return;
+                viewerRef.current.entities.add({
+                    position: Cartesian3.fromDegrees(116.11, 5.92, 100),
+                    point: { pixelSize: 15, color: Color.YELLOW, outlineColor: Color.BLACK, outlineWidth: 2 },
+                    label: { text: 'School', verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, -20) }
+                });
+                viewerRef.current.entities.add({
+                    position: Cartesian3.fromDegrees(116.115, 5.915, 100),
+                    point: { pixelSize: 15, color: Color.YELLOW, outlineColor: Color.BLACK, outlineWidth: 2 },
+                    label: { text: 'Hospital', verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, -20) }
+                });
+                viewerRef.current.camera.flyTo({
+                    destination: Cartesian3.fromDegrees(116.112, 5.917, 2500),
+                    duration: 2.0
+                });
+            },
+            logMessage: (msg: string) => {
+                console.log("AI says:", msg);
+            }
+        };
+    }, [loadedTileset]);
 
     // Handle click events for selection
     useEffect(() => {
@@ -555,6 +635,9 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
 
         viewerRef.current = viewer;
 
+        // ENABLE TRANSLUCENT DEPTH PICKING (For Gaussian Splats)
+        viewer.scene.pickTranslucentDepth = true;
+
         // ENABLE LIGHTING (VITAL FOR HIDING GLOBE)
         viewer.scene.light = new DirectionalLight({
             direction: new Cartesian3(1, 1, -1),
@@ -720,28 +803,28 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
                     // Polyline preview
                     previewEntity = viewer.entities.add({
                         polyline: new PolylineGraphics({
-                            positions: dynamicPositions,
+                            positions: new CallbackProperty(() => raisePoints(dynamicPositions.getValue(new JulianDate()) || []), false),
                             width: 3,
                             material: activeTool === 'height' ? Color.PURPLE : Color.ORANGE,
-                            clampToGround: activeTool !== 'height',
+                            clampToGround: false,
                         })
                     });
                 } else if (activeTool === 'area') {
                     previewEntity = viewer.entities.add({
                         polyline: new PolylineGraphics({
-                            positions: dynamicPositions,
+                            positions: new CallbackProperty(() => raisePoints(dynamicPositions.getValue(new JulianDate()) || []), false),
                             width: 3,
                             material: Color.CYAN.withAlpha(0.8),
-                            clampToGround: true,
+                            clampToGround: false,
                         }),
                         polygon: new PolygonGraphics({
                             hierarchy: new CallbackProperty(() => {
                                 const pts = [...drawingPointsRef.current];
                                 if (currentMousePosition) pts.push(currentMousePosition);
-                                return pts.length >= 3 ? new PolygonHierarchy(pts) : undefined;
+                                return pts.length >= 3 ? new PolygonHierarchy(raisePoints(pts)) : undefined;
                             }, false),
                             material: Color.CYAN.withAlpha(0.5),
-                            classificationType: ClassificationType.CESIUM_3D_TILE,
+                            perPositionHeight: true,
                         })
                     });
                 } else if (activeTool === 'circle') {
@@ -765,6 +848,7 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
                             }, false),
                             material: Color.YELLOW.withAlpha(0.3),
                             outline: true,
+                            height: Cartographic.fromCartesian(pickedPosition).height + 0.5,
                             outlineColor: Color.YELLOW,
                         })
                     });
@@ -772,7 +856,7 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
                     // Triangle preview (solid line to mouse)
                     previewEntity = viewer.entities.add({
                         polyline: new PolylineGraphics({
-                            positions: dynamicPositions,
+                            positions: new CallbackProperty(() => raisePoints(dynamicPositions.getValue(new JulianDate()) || []), false),
                             width: 3,
                             material: Color.WHITE,
                         })
@@ -893,19 +977,19 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
                 if (newPoints.length === 1) {
                     const previewEntity = viewer.entities.add({
                         polyline: new PolylineGraphics({
-                            positions: dynamicPositions,
+                            positions: new CallbackProperty(() => raisePoints(dynamicPositions.getValue(new JulianDate()) || []), false),
                             width: 3,
                             material: activeAnnotationTool === 'line' ? Color.ORANGE : Color.PURPLE.withAlpha(0.8),
-                            clampToGround: true,
+                            clampToGround: false,
                         }),
                         polygon: activeAnnotationTool === 'polygon' ? new PolygonGraphics({
                             hierarchy: new CallbackProperty(() => {
                                 const pts = [...annotationPointsRef.current];
                                 if (currentMousePosition) pts.push(currentMousePosition);
-                                return pts.length >= 3 ? new PolygonHierarchy(pts) : undefined;
+                                return pts.length >= 3 ? new PolygonHierarchy(raisePoints(pts)) : undefined;
                             }, false),
                             material: Color.PURPLE.withAlpha(0.5),
-                            classificationType: ClassificationType.CESIUM_3D_TILE,
+                            perPositionHeight: true,
                         }) : undefined
                     });
                     tempEntitiesRef.current.push(previewEntity);
@@ -954,10 +1038,10 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
 
         const entity = viewerRef.current.entities.add({
             polyline: new PolylineGraphics({
-                positions: points,
+                positions: raisePoints(points),
                 width: 3,
                 material: Color.ORANGE,
-                clampToGround: true,
+                clampToGround: false,
             }),
             label: new LabelGraphics({
                 text: convertDistance(distance),
@@ -1003,7 +1087,7 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
 
         const entity = viewerRef.current.entities.add({
             polyline: new PolylineGraphics({
-                positions: points,
+                positions: raisePoints(points),
                 width: 3,
                 material: Color.PURPLE,
             }),
@@ -1181,12 +1265,12 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
 
         const entity = viewerRef.current.entities.add({
             polygon: new PolygonGraphics({
-                hierarchy: points,
+                hierarchy: raisePoints(points),
                 material: Color.CYAN.withAlpha(0.5),
                 outline: true,
                 outlineColor: Color.CYAN,
                 outlineWidth: 2,
-                classificationType: ClassificationType.CESIUM_3D_TILE,
+                perPositionHeight: true,
             }),
             label: new LabelGraphics({
                 text: `Area: ${convertArea(area)}\nPerimeter: ${convertDistance(perimeter)}`,
@@ -1262,10 +1346,10 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
         const viewer = viewerRef.current;
         const entity = viewer.entities.add({
             polyline: new PolylineGraphics({
-                positions: points,
+                positions: raisePoints(points),
                 width: 3,
                 material: Color.ORANGE,
-                clampToGround: true,
+                clampToGround: false,
             }),
         });
 
@@ -1286,12 +1370,12 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
         const viewer = viewerRef.current;
         const entity = viewer.entities.add({
             polygon: new PolygonGraphics({
-                hierarchy: points,
+                hierarchy: raisePoints(points),
                 material: Color.PURPLE.withAlpha(0.5),
                 outline: true,
                 outlineColor: Color.PURPLE,
                 outlineWidth: 2,
-                classificationType: ClassificationType.CESIUM_3D_TILE,
+                perPositionHeight: true,
             }),
         });
 
@@ -1338,7 +1422,7 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
                 outline: true,
                 outlineColor: Color.GREEN,
                 outlineWidth: 2,
-                classificationType: ClassificationType.CESIUM_3D_TILE,
+                height: Cartographic.fromCartesian(points[0]).height + 0.5,
             }),
             label: new LabelGraphics({
                 text: `Radius: ${convertDistance(radius)}\nArea: ${convertArea(area)}`,
@@ -1888,6 +1972,7 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
                     </div>
                 </div>
             </div>
+            <ChatbotWidget />
         </div>
     );
 }

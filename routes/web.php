@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProxyController;
+use App\Http\Controllers\ChatbotController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/proxy', [ProxyController::class, 'proxy'])->name('proxy');
@@ -26,6 +27,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.delete');
         Route::post('/users/{user}/reset-password', [AdminController::class, 'resetPassword'])->name('users.reset-password');
 
+        Route::get('/view/{submission}', [UserController::class, 'viewProject'])->name('view');
+        Route::get('/three-splat/{submission}', [UserController::class, 'viewProject'])->name('three_splat');
+
         Route::get('/submissions', [AdminController::class, 'manageSubmissions'])->name('submissions');
         Route::post('/submissions/{submission}/update', [AdminController::class, 'updateSubmission'])->name('submissions.update');
         Route::post('/submissions/{submission}/unarchive', [AdminController::class, 'unarchiveSubmission'])->name('submissions.unarchive');
@@ -40,5 +44,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/register-model/verify', [SubmissionController::class, 'verifyExternalFolder'])->name('register_model.verify');
         Route::post('/register-model/verify-sftp', [SubmissionController::class, 'verifySftpFolder'])->name('register_model.verify_sftp');
         Route::get('/view/{submission}', [UserController::class, 'viewProject'])->name('view');
+        Route::get('/three-splat/{submission}', [UserController::class, 'viewProject'])->name('three_splat');
+        Route::post('/chat', [ChatbotController::class, 'ask'])->name('chat');
     });
 });

@@ -1,4 +1,3 @@
-// main.tsx
 import './cesium-wrapper'; // Ensure the wrapper sets the global first
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';

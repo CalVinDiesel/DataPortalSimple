@@ -35,8 +35,8 @@ try {
     // Run the conversion
     console.log("Running conversion to 3D Tiles (this may take a while depending on file size)...");
     
-    // Using khr_native convention as recommended by the repository for standard GLB output
-    const cmd = `npx 3dgs-ply-3dtiles-converter "${inputPlyFile}" "${outputDir}" --input-convention khr_native`;
+    // Using graphdeco convention since standard photogrammetry/Postshot PLY files use it
+    const cmd = `npx 3dgs-ply-3dtiles-converter "${inputPlyFile}" "${outputDir}" --input-convention graphdeco`;
     execSync(cmd, { stdio: 'inherit' });
 
     console.log("\n=======================================================");
