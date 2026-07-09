@@ -21,9 +21,85 @@ function SplatMesh({ url, controlsRef }: { url: string, controlsRef: any }) {
 
         const initSplat = async () => {
             try {
-                await viewer.addSplatScene(url, {
-                    showLoadingUI: true
-                });
+                let actualUrl = url;
+                let isFolderWise = false;
+                
+                // If the URL is tileset.json (from the mega-pipeline), we must convert it to a PLY URL
+                if (actualUrl.includes('tileset.json')) {
+                    const manifestUrl = actualUrl.replace('/tileset_merged/tileset.json', '/manifest.json');
+                    const mergedUrl = actualUrl.replace('/tileset_merged/tileset.json', '/merged_upload.ply');
+                    
+                    try {
+                        const checkManifest = await fetch(manifestUrl, { method: 'HEAD' });
+                        if (checkManifest.ok) {
+                            actualUrl = manifestUrl;
+                        } else {
+                            actualUrl = mergedUrl;
+                        }
+                    } catch (e) {
+                        actualUrl = mergedUrl;
+                    }
+                }
+
+                if (actualUrl.endsWith('manifest.json')) {
+                    const baseUrl = actualUrl.replace('manifest.json', '');
+                    
+                    // NEW HYBRID LOGIC: 
+                    // First, check if the global `merged_upload.ply` exists. 
+                    // If it does, load that ONE giant file so we get perfectly sharp edges!
+                    const globalMergedUrl = actualUrl.replace('manifest.json', 'merged_upload.ply');
+                    try {
+                        const checkRes = await fetch(globalMergedUrl, { method: 'HEAD' });
+                        if (checkRes.ok) {
+                            console.log(`[PLY Viewer] Found global merged file! Loading ${globalMergedUrl} for perfect sharpness.`);
+                            await viewer.addSplatScene(globalMergedUrl, { showLoadingUI: true });
+                            if (isMounted) setViewerObj(viewer);
+                            return; // Stop here, we don't need to load the individual folders!
+                        }
+                    } catch(err) {
+                        console.log("[PLY Viewer] Global merged file not found, falling back to folder-wise loading.");
+                    }
+
+                    const manifestRes = await fetch(actualUrl);
+                    const manifest = await manifestRes.json();
+                    
+                    if (manifest.type === 'folder_wise_ply' && manifest.folders) {
+                        isFolderWise = true;
+                        for (const folder of manifest.folders) {
+                            try {
+                                const metaRes = await fetch(`${baseUrl}${folder}/metadata.xml`);
+                                if (!metaRes.ok) continue;
+                                const metaText = await metaRes.text();
+                                
+                                // Quick check if the glued file exists (created by merge_tile_lods.js)
+                                const gluedPath = `${baseUrl}${folder}/merged_tile.ply`;
+                                try {
+                                    const checkRes = await fetch(gluedPath, { method: 'HEAD' });
+                                    if (checkRes.ok) {
+                                        console.log(`[PLY Viewer] Loading Perfectly Glued Tile: ${gluedPath}`);
+                                        await viewer.addSplatScene(gluedPath, {
+                                            showLoadingUI: true
+                                        });
+                                    } else {
+                                        throw new Error("Glued file not ready");
+                                    }
+                                } catch(err) {
+                                    console.warn(`[PLY Viewer] Glued tile missing, falling back to point_cloud.xply...`);
+                                    await viewer.addSplatScene(`${baseUrl}${folder}/point_cloud.xply`, {
+                                        showLoadingUI: true
+                                    });
+                                }
+                            } catch (e) {
+                                console.warn(`Could not process metadata for ${folder}`, e);
+                            }
+                        }
+                    }
+                } else {
+                    await viewer.addSplatScene(actualUrl, {
+                        showLoadingUI: true
+                    });
+                }
+                
                 if (isMounted) {
                     setViewerObj(viewer);
                 }
@@ -145,9 +221,19 @@ const ThreeSplatViewer = () => {
                 if (!modelPath) {
                     modelPath = params.get('tileset_url');
                     if (modelPath && modelPath.endsWith('tileset.json')) {
-                         modelPath = modelPath.replace(/tileset\.json$/, 'merged_upload.ply');
-                         modelPath = modelPath.replace('/tileset_merged/', '/');
-                         modelPath = modelPath.replace('/Data/', '/');
+                         const basePath = modelPath.replace(/tileset\.json$/, '').replace('/tileset_merged/', '/').replace('/Data/', '/');
+                         const manifestPath = basePath + 'manifest.json';
+                         
+                         try {
+                             const res = await fetch(manifestPath, { method: 'HEAD' });
+                             if (res.ok) {
+                                 modelPath = manifestPath;
+                             } else {
+                                 modelPath = basePath + 'merged_upload.ply';
+                             }
+                         } catch (e) {
+                             modelPath = basePath + 'merged_upload.ply';
+                         }
                     }
                 }
 
@@ -157,7 +243,7 @@ const ThreeSplatViewer = () => {
 
                 const response = await fetch(modelPath, { method: 'HEAD' });
                 if (!response.ok) {
-                    throw new Error(`The raw file does not exist on the server (HTTP ${response.status}).`);
+                    throw new Error(`The raw data does not exist on the server (HTTP ${response.status}).`);
                 }
 
                 setModelUrl(modelPath);

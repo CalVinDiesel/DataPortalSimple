@@ -17,7 +17,7 @@ try {
             const filePath = path.join(dir, file);
             if (fs.statSync(filePath).isDirectory()) {
                 getAllPlyFiles(filePath, fileList);
-            } else if (file.endsWith('.ply')) {
+            } else if (file.endsWith('.ply') && file !== 'merged_upload.ply' && file !== 'merged_tile.ply') {
                 fileList.push(filePath);
             }
         }
@@ -110,16 +110,48 @@ try {
         console.log('Rotation applied successfully.');
     }
 
-    // 4. Cleanup original fragments
-    console.log('Cleaning up original .ply fragments...');
-    for (const file of files) {
-        if (file !== mergedFilePath && fs.existsSync(file)) {
-            fs.unlinkSync(file);
+    // 4. Folder-Wise Gluing & Cleanup
+    console.log('Checking for folder-wise manifest...');
+    const manifestPath = path.join(inputDir, 'manifest.json');
+    
+    if (fs.existsSync(manifestPath)) {
+        console.log('Manifest found! Performing Folder-Wise Gluing...');
+        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        
+        if (manifest.type === 'folder_wise_ply') {
+            for (const folder of manifest.folders) {
+                const folderPath = path.join(inputDir, folder);
+                if (!fs.existsSync(folderPath)) continue;
+
+                const folderFiles = fs.readdirSync(folderPath);
+                const plyFiles = folderFiles
+                    .filter(f => f.endsWith('.ply') && f !== 'merged_tile.ply' && !f.endsWith('.xply'))
+                    .map(f => path.join(folderPath, f));
+
+                if (plyFiles.length === 0) continue;
+
+                // We no longer generate `merged_tile.ply` inside each folder!
+                // 1. It saves massive amounts of disk space.
+                // 2. The folders remain purely RAW data (just like Project 36).
+                // 3. The Three.js Viewer uses `merged_upload.ply` instead.
+            }
         }
+    } else {
+        console.log('No manifest. Skipping cleanup to preserve raw folders...');
+        // for (const file of files) {
+        //     if (fs.existsSync(file)) {
+        //         fs.unlinkSync(file);
+        //     }
+        // }
     }
     
-    // fs.unlinkSync(mergedFilePath); // COMMENTED OUT: We need to keep this file so the Independent Raw PLY Interface can render it!
-    console.log('Automated pipeline completed successfully!');
+    // We will NO LONGER delete the global merged file! 
+    // The Three.js viewer needs this single massive file to render perfectly sharp edges.
+    // if (fs.existsSync(mergedFilePath)) {
+    //     fs.unlinkSync(mergedFilePath); 
+    // }
+    
+    console.log('Mega-Pipeline completed successfully!');
 
 } catch (err) {
     console.error('Error in pipeline:', err);

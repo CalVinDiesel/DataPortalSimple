@@ -105,9 +105,34 @@ Follow these critical steps when deploying the system to a live server (e.g., Ub
    ```text
    * * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
    ```
-7. **Firewall Rules (Crucial for SFTP Scans)**
+7. **Configure Background Queue Worker (Supervisor)**
+   The system processes heavy 3D conversions in the background. To ensure this runs automatically 24/7 on your Linux server, install Supervisor:
+   ```bash
+   sudo apt-get install supervisor
+   ```
+   Create a configuration file (`/etc/supervisor/conf.d/3dhub-worker.conf`):
+   ```ini
+   [program:3dhub-worker]
+   process_name=%(program_name)s_%(process_num)02d
+   command=php /path-to-your-project/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+   autostart=true
+   autorestart=true
+   stopasgroup=true
+   killasgroup=true
+   user=www-data
+   numprocs=1
+   redirect_stderr=true
+   stdout_logfile=/path-to-your-project/storage/logs/worker.log
+   ```
+   Then start the worker:
+   ```bash
+   sudo supervisorctl reread
+   sudo supervisorctl update
+   sudo supervisorctl start 3dhub-worker:*
+   ```
+8. **Firewall Rules (Crucial for SFTP Scans)**
    Because the system performs Deep Scans on external 3D Tilesets via `SftpService.php`, ensure your server's firewall allows **Outbound Connections on Port 22** (or the respective SFTP port of your target servers).
-8. **Google Drive Integration**
+9. **Google Drive Integration**
    To enable real-time file scanning, refer to the **Google Drive Automated Scanner Integration** section below to configure your `google-service-account.json`.
 
 ---

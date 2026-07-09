@@ -180,21 +180,34 @@ class SubmissionController extends Controller
             $objFilesToConvert = [];
             $plyFilesToConvert = [];
 
+            $filePaths = $request->input('file_paths');
+
             // 1. Move all files first (so .obj files have access to their .mtl and .jpg friends)
-            foreach ($files as $file) {
+            foreach ($files as $index => $file) {
                 $extension = strtolower($file->getClientOriginalExtension());
-                // Use original name so textures link correctly
-                $originalName = $file->getClientOriginalName();
-                // If it uploaded from a folder, getClientOriginalName() might include the path, so just take basename
-                $filename = basename($originalName);
                 
-                $rawPath = $modelDir . '/' . $filename;
-                $file->move($modelDir, $filename);
+                if (is_array($filePaths) && isset($filePaths[$index])) {
+                    $relativePath = ltrim($filePaths[$index], '/');
+                } else {
+                    $relativePath = $file->getClientOriginalName();
+                }
+
+                $dirName = dirname($relativePath);
+                $directory = $dirName === '.' ? $modelDir : $modelDir . '/' . $dirName;
+                
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0777, true);
+                }
+
+                $filename = basename($relativePath);
+                $rawPath = $modelDir . '/' . $relativePath;
+                
+                $file->move($directory, $filename);
 
                 if ($extension === 'obj') {
                     $objFilesToConvert[] = [
                         'rawPath' => $rawPath,
-                        'glbPath' => $modelDir . '/' . str_replace('.obj', '.glb', $filename),
+                        'glbPath' => $directory . '/' . str_replace('.obj', '.glb', $filename),
                         'filename' => $filename
                     ];
                 } elseif ($extension === 'ply') {
@@ -204,7 +217,7 @@ class SubmissionController extends Controller
                         'filename' => $filename
                     ];
                 } elseif ($extension === 'glb' || $extension === 'gltf') {
-                    $processedUrls[] = "/models/{$submission->id}/{$filename}";
+                    $processedUrls[] = "/models/{$submission->id}/{$relativePath}";
                 }
             }
 
@@ -219,19 +232,41 @@ class SubmissionController extends Controller
                 }
             }
 
-            // 3. Convert all .ply Gaussian Splat files into 3D Tiles
+            // Generate a manifest.json for the PLY Viewer to know what folders exist
+            $isFolderWise = false;
+            if (count($plyFilesToConvert) > 0) {
+                $manifestFolders = [];
+                foreach ($plyFilesToConvert as $ply) {
+                    $dir = dirname($ply['rawPath']);
+                    $relativeDir = str_replace($modelDir . '/', '', $dir);
+                    if ($relativeDir === $modelDir) $relativeDir = '';
+                    
+                    if ($relativeDir !== '' && !in_array($relativeDir, $manifestFolders)) {
+                        $manifestFolders[] = $relativeDir;
+                    }
+                }
+                file_put_contents($modelDir . '/manifest.json', json_encode([
+                    'type' => 'folder_wise_ply',
+                    'folders' => array_values($manifestFolders)
+                ]));
+                
+                $isFolderWise = count($manifestFolders) > 0;
+            }
+
+            // 3. Convert all .ply Gaussian Splat files into 3D Tiles in the BACKGROUND
             if (count($plyFilesToConvert) > 0) {
                 try {
                     $tilesetDir = $modelDir . '/tileset_merged';
                     $nodeScript = base_path('process_splat_upload.js');
                     
-                    // Run the Node.js pipeline which automatically handles 1 or multiple .ply files
-                    // It merges them, converts them, and applies the exact transform matrix needed.
-                    exec("node \"{$nodeScript}\" \"{$modelDir}\" \"{$tilesetDir}\"");
+                    // Dispatch the job to run in the background
+                    \App\Jobs\ConvertSplatJob::dispatch($submission->id, $modelDir, $tilesetDir, $nodeScript);
                     
+                    // We always set the URL to tileset.json so the Cesium viewer works.
+                    // The Three.js viewer will automatically fallback to manifest.json if it exists.
                     $processedUrls[] = "/models/{$submission->id}/tileset_merged/tileset.json";
                 } catch (\Exception $e) {
-                    \Log::error("PLY Conversion/Merge Failed: " . $e->getMessage());
+                    \Log::error("Failed to dispatch PLY Conversion Job: " . $e->getMessage());
                 }
             }
 

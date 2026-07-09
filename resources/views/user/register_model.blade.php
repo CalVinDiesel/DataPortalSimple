@@ -7,7 +7,7 @@
         <p>Provide your existing 3D tileset URLs to use our analysis tools</p>
     </div>
 
-    <form method="POST" action="{{ route('user.register_model.submit') }}" enctype="multipart/form-data">
+    <form id="uploadForm" method="POST" action="{{ route('user.register_model.submit') }}" enctype="multipart/form-data" onsubmit="submitWithProgress(event)">
         @csrf
         <div class="form-group">
             <label for="project_name">Project Name *</label>
@@ -81,13 +81,26 @@
                         function renderFileList() {
                             listContainer.innerHTML = '';
                             
+                            // Remove old hidden inputs
+                            document.querySelectorAll('.hidden-file-path').forEach(el => el.remove());
+                            
                             for (let i = 0; i < globalDt.files.length; i++) {
                                 const f = globalDt.files[i];
+                                const displayPath = f.customPath || f.webkitRelativePath || f.name;
+                                
+                                // Create hidden input for the PHP backend to read
+                                const hiddenInput = document.createElement('input');
+                                hiddenInput.type = 'hidden';
+                                hiddenInput.name = 'file_paths[]';
+                                hiddenInput.value = displayPath;
+                                hiddenInput.className = 'hidden-file-path';
+                                document.getElementById('upload_ui_box').appendChild(hiddenInput);
+
                                 listContainer.innerHTML += `
                                     <li style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.05); margin-bottom: 5px; border-radius: 6px;">
                                         <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
                                             <svg style="width: 20px; color: #9ca3af; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                            <span style="color: white; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${f.name}</span>
+                                            <span style="color: white; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">${displayPath}</span>
                                             <span style="color: #9ca3af; font-size: 0.75rem;">${formatBytes(f.size)}</span>
                                         </div>
                                         <button type="button" onclick="event.stopPropagation(); removeFile(${i})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 5px; border-radius: 4px; transition: background 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='none'">
@@ -148,15 +161,16 @@
 
                             const items = e.dataTransfer.items;
 
-                            async function getFilesFromEntry(entry) {
+                            async function getFilesFromEntry(entry, path = '') {
                                 if (entry.isFile) {
                                     const file = await new Promise(resolve => entry.file(resolve));
+                                    file.customPath = path + file.name;
                                     globalDt.items.add(file);
                                 } else if (entry.isDirectory) {
                                     const dirReader = entry.createReader();
                                     const entries = await new Promise(resolve => dirReader.readEntries(resolve));
                                     for (let i = 0; i < entries.length; i++) {
-                                        await getFilesFromEntry(entries[i]);
+                                        await getFilesFromEntry(entries[i], path + entry.name + '/');
                                     }
                                 }
                             }
@@ -365,6 +379,73 @@
         </div>
     </form>
 </div>
+
+<!-- FULL SCREEN LOADING OVERLAY WITH PROGRESS BAR -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; backdrop-filter: blur(5px); flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white;">
+    <h2 id="progressTitle" style="font-size: 1.8rem; margin-bottom: 10px; color: #3b82f6; font-weight: 700;">Uploading 3D Data...</h2>
+    
+    <!-- Progress Bar Container -->
+    <div style="width: 80%; max-width: 600px; height: 30px; background: rgba(255,255,255,0.1); border-radius: 15px; margin: 20px 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);">
+        <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #10b981); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">0%</div>
+    </div>
+    
+    <p id="progressDetails" style="font-size: 1rem; color: #9ca3af; margin-bottom: 30px; font-family: monospace;">0 MB / 0 MB uploaded</p>
+    
+    <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); padding: 12px 20px; border-radius: 8px; display: inline-block;">
+        <span style="color: #eab308; font-weight: bold;">⚠️ PLEASE DO NOT CLOSE OR REFRESH THIS TAB</span>
+    </div>
+</div>
+
+<script>
+    function submitWithProgress(event) {
+        event.preventDefault();
+        
+        const form = document.getElementById('uploadForm');
+        const formData = new FormData(form);
+        
+        // Show Overlay
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('btnSubmit').disabled = true;
+        document.getElementById('btnSubmit').innerHTML = 'Uploading...';
+        
+        const progressBar = document.getElementById('progressBar');
+        const progressDetails = document.getElementById('progressDetails');
+        const progressTitle = document.getElementById('progressTitle');
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', form.action, true);
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percentComplete + '%';
+                progressBar.textContent = percentComplete + '%';
+                
+                const loadedMB = (e.loaded / (1024 * 1024)).toFixed(2);
+                const totalMB = (e.total / (1024 * 1024)).toFixed(2);
+                progressDetails.textContent = `${loadedMB} MB / ${totalMB} MB uploaded`;
+                
+                if (percentComplete === 100) {
+                    progressTitle.textContent = "Processing on Server... Please Wait";
+                    progressBar.style.background = "#10b981"; // Turn green
+                }
+            }
+        };
+        
+        xhr.onload = function() {
+            // Laravel redirects on success, so we just redirect the browser to the dashboard
+            window.location.href = "{{ route('dashboard') }}";
+        };
+        
+        xhr.onerror = function() {
+            alert('An error occurred during the upload. Please try again or check your file size limits.');
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('btnSubmit').disabled = false;
+        };
+        
+        xhr.send(formData);
+    }
+</script>
 
 <style>
     @keyframes spin {

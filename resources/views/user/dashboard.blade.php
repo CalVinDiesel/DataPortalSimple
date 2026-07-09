@@ -88,8 +88,10 @@
                                     @php
                                         $hasPlyFile = false;
                                         $folderPath = public_path('models/' . $submission->id);
-                                        if (is_dir($folderPath) && !empty(glob($folderPath . '/*.ply'))) {
-                                            $hasPlyFile = true;
+                                        if (is_dir($folderPath)) {
+                                            if (!empty(glob($folderPath . '/*.ply')) || file_exists($folderPath . '/manifest.json')) {
+                                                $hasPlyFile = true;
+                                            }
                                         }
                                     @endphp
                                     
