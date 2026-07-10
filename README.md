@@ -191,5 +191,61 @@ Since the Service Account is a secure "robot" identity, it must be allowed to re
 
 ---
 
+## ⚠️ Important Deployment Warnings
+
+1. **Massive Disk Space Required:** 3D Gaussian Splatting and 3D Tile conversions require massive amounts of temporary disk space. Ensure the production server has a very large SSD or block storage attached to prevent `ENOSPC` crash errors during conversion.
+2. **Technical Debt (Hardcoded Coordinates):** For the initial demo, the Three.js viewer camera (`ThreeSplatViewer.tsx`) is hardcoded to `[238, 307, 41]` and the 3D tiles converter (`process_splat_upload.js`) forces a `[0,0,0]` GPS origin. These must be made dynamic before supporting multiple overlapping projects on a global map.
+
+---
+
+## 🏗️ System Architecture
+
+### 1. Requirements
+- **Business Logic:** Provide a portal for users to submit raw 3D scan data (Google Drive/SFTP) and external processed models, which administrators review, process into 3D Tiles/Splatting formats, and publish back to the user's dashboard for interactive 3D visualization.
+- **Storage Limits:** Strict file size and tile size limits (configured in `config/portal.php`).
+- **Data Retention:** Automated scheduled archiving (`HousekeepSubmissions.php`) to move old projects to SFTP backups and free up server storage.
+
+### 2. Database Design
+The system uses a relational database (PostgreSQL/MySQL) with two primary tables:
+- `users`: Standard Laravel authentication table (`id`, `name`, `email`, `password`, `role`).
+- `submissions`: Stores all project data, linked to users via `user_id`. Key columns include:
+  - **Metadata:** `project_name`, `camera_config`, `category`, `output_category`.
+  - **Source Data:** `google_drive_link`, `sftp_host`, `sftp_username`, `sftp_password`.
+  - **Processed Outputs:** `processed_data_path`, `terrain_path`, `building_path`.
+  - **State Management:** `status` (pending, processing, completed, rejected), `admin_remarks`, `is_archived`.
+- `jobs` / `failed_jobs`: Default Laravel tables for handling the background conversion queue.
+
+### 3. Data Flow Design
+1. **Upload Phase:** User submits a form with SFTP/Drive links -> Controller validates constraints -> Saves to `submissions` table (Status: Pending).
+2. **Processing Phase:** Admin triggers background job -> Laravel pushes `ConvertSplatJob` to the Queue -> Node.js script (`process_splat_upload.js`) downloads, merges PLY, and generates 3D Tiles -> Job finishes and updates Status to Pending Review.
+3. **Review Phase:** Admin reviews the 3D tiles -> Updates Status to Completed -> User gains access to "View in Map" buttons on their dashboard.
+4. **Housekeeping Phase:** Nightly Cron Job scans for old completed submissions -> Zips files -> Uploads to Backup SFTP -> Deletes local files -> Flags `is_archived = true`.
+
+### 4. File Arrangement
+- `app/Http/Controllers/`: Contains core logic (`SubmissionController`, `UserSubmissionController`, `ChatbotController`).
+- `app/Console/Commands/`: Contains automated scripts (`HousekeepSubmissions.php`).
+- `app/Jobs/`: Contains background queue workers (`ConvertSplatJob.php`).
+- `resources/views/`: Contains Blade UI templates (split into `admin/` and `user/`).
+- `resources/js/viewer/`: Contains the React frontend for the 3D viewers (`ThreeSplatViewer.tsx`, `DiscoveryPage.tsx`).
+- `public/models/`: The physical storage directory where raw PLY files and processed 3D tiles are kept.
+- `process_splat_upload.js`: The standalone Node.js pipeline script for 3D conversion.
+
+### 5. Detailed MVC Breakdown
+- **Model:** `User.php`, `Submission.php` (Define Eloquent relationships).
+- **View:** 
+  - `user/dashboard.blade.php`: Client-side project list and viewer access.
+  - `admin/submissions.blade.php`: Admin panel to review, edit, and approve models.
+  - `register_model.blade.php`: Complex UI for handling drag-and-drop and cloud link verification.
+- **Controller:** 
+  - `SubmissionController`: Handles admin updates, routing, and initiating the background Queue.
+  - `UserSubmissionController`: Handles standard user uploads, validation, and dashboard views.
+
+### 6. API Endpoints
+- `GET /api/map-data/{id}`: Returns JSON formatted location metadata and 3D Tile URLs for the Cesium Viewer.
+- `POST /user/chat`: Sends natural language queries to OpenAI (`gpt-4o-mini`) and returns structured `ViewerAPI` function calls (e.g., `showFloodRisk`, `showPOIs`).
+- `POST /user/submissions/verify-link`: Validates Google Drive/OneDrive sharing permissions before allowing submission.
+
+---
+
 ## 📄 License
 This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

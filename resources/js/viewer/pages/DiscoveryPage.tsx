@@ -260,6 +260,40 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
 
     // Global API for Chatbot (The Bridge)
     useEffect(() => {
+        // Helper to get the coordinate the user is currently looking at
+        const getRelativeCenter = () => {
+            if (!viewerRef.current) return { lon: 116.11, lat: 5.92 };
+            const viewer = viewerRef.current;
+            const canvas = viewer.scene.canvas;
+            const center = new Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2);
+            let position = null;
+            
+            if (viewer.scene.globe.show) {
+                const pickRay = viewer.camera.getPickRay(center);
+                if (pickRay) {
+                    position = viewer.scene.globe.pick(pickRay, viewer.scene);
+                }
+            } else {
+                // If globe is hidden (like floating models), try pickPosition first
+                position = viewer.scene.pickPosition(center);
+            }
+
+            if (!position) {
+                // Fallback to camera's cartographic position directly below it
+                const cartographic = viewer.camera.positionCartographic;
+                return {
+                    lon: CesiumMath.toDegrees(cartographic.longitude),
+                    lat: CesiumMath.toDegrees(cartographic.latitude)
+                };
+            }
+            
+            const cartographic = Cartographic.fromCartesian(position);
+            return {
+                lon: CesiumMath.toDegrees(cartographic.longitude),
+                lat: CesiumMath.toDegrees(cartographic.latitude)
+            };
+        };
+
         (window as any).ViewerAPI = {
             flyTo: (lat: number, lon: number, height: number = 500) => {
                 if (viewerRef.current) {
@@ -276,18 +310,20 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
             },
             showHighestPoint: () => {
                 if (!viewerRef.current) return;
+                const { lon, lat } = getRelativeCenter();
                 viewerRef.current.entities.add({
-                    position: Cartesian3.fromDegrees(116.113, 5.918, 500), // Mock coordinate near Penampang
+                    position: Cartesian3.fromDegrees(lon, lat, 500),
                     point: { pixelSize: 20, color: Color.RED, outlineColor: Color.WHITE, outlineWidth: 3 },
                     label: { text: 'Highest Point (300m)', verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, -25) }
                 });
                 viewerRef.current.camera.flyTo({
-                    destination: Cartesian3.fromDegrees(116.113, 5.918, 1500),
+                    destination: Cartesian3.fromDegrees(lon, lat, 1500),
                     duration: 2.0
                 });
             },
             showFloodRisk: (level: string) => {
                 if (!viewerRef.current) return;
+                const { lon, lat } = getRelativeCenter();
                 let riskColor = Color.BLUE.withAlpha(0.3);
                 if (level.toLowerCase() === 'high') riskColor = Color.RED.withAlpha(0.4);
                 if (level.toLowerCase() === 'moderate') riskColor = Color.ORANGE.withAlpha(0.4);
@@ -295,34 +331,35 @@ function DiscoveryPage({ locationData, modelId, stateSiteTitle }: {
                 viewerRef.current.entities.add({
                     polygon: {
                         hierarchy: new PolygonHierarchy(Cartesian3.fromDegreesArray([
-                            116.10, 5.91,
-                            116.12, 5.91,
-                            116.12, 5.93,
-                            116.10, 5.93
+                            lon - 0.01, lat - 0.01,
+                            lon + 0.01, lat - 0.01,
+                            lon + 0.01, lat + 0.01,
+                            lon - 0.01, lat + 0.01
                         ])),
                         material: riskColor,
                         height: 50 // clamp slightly above ground
                     }
                 });
                 viewerRef.current.camera.flyTo({
-                    destination: Cartesian3.fromDegrees(116.11, 5.92, 3000),
+                    destination: Cartesian3.fromDegrees(lon, lat, 3000),
                     duration: 2.0
                 });
             },
             showPOIs: () => {
                 if (!viewerRef.current) return;
+                const { lon, lat } = getRelativeCenter();
                 viewerRef.current.entities.add({
-                    position: Cartesian3.fromDegrees(116.11, 5.92, 100),
+                    position: Cartesian3.fromDegrees(lon - 0.002, lat + 0.002, 100),
                     point: { pixelSize: 15, color: Color.YELLOW, outlineColor: Color.BLACK, outlineWidth: 2 },
                     label: { text: 'School', verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, -20) }
                 });
                 viewerRef.current.entities.add({
-                    position: Cartesian3.fromDegrees(116.115, 5.915, 100),
+                    position: Cartesian3.fromDegrees(lon + 0.003, lat - 0.003, 100),
                     point: { pixelSize: 15, color: Color.YELLOW, outlineColor: Color.BLACK, outlineWidth: 2 },
                     label: { text: 'Hospital', verticalOrigin: VerticalOrigin.BOTTOM, pixelOffset: new Cartesian2(0, -20) }
                 });
                 viewerRef.current.camera.flyTo({
-                    destination: Cartesian3.fromDegrees(116.112, 5.917, 2500),
+                    destination: Cartesian3.fromDegrees(lon, lat, 2500),
                     duration: 2.0
                 });
             },
