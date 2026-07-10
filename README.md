@@ -201,9 +201,26 @@ Since the Service Account is a secure "robot" identity, it must be allowed to re
 ## 🏗️ System Architecture
 
 ### 1. Requirements
-- **Business Logic:** Provide a portal for users to submit raw 3D scan data (Google Drive/SFTP) and external processed models, which administrators review, process into 3D Tiles/Splatting formats, and publish back to the user's dashboard for interactive 3D visualization.
-- **Storage Limits:** Strict file size and tile size limits (configured in `config/portal.php`).
-- **Data Retention:** Automated scheduled archiving (`HousekeepSubmissions.php`) to move old projects to SFTP backups and free up server storage.
+
+#### Functional Requirements
+- **Cloud Link Validation:** The portal must automatically verify that user-submitted Google Drive and OneDrive links are set to "Public/Anyone with the link" before accepting the submission to prevent pipeline stalls.
+- **Background Processing Pipeline:** The system must handle heavy 3D `.ply` to 3D Tiles and Gaussian Splat conversions asynchronously via Laravel Queues and the external `3dgs-ply-3dtiles-converter` Node.js script.
+- **Interactive 3D Visualization:** Users and Admins must be able to view processed 3D datasets natively in the browser via CesiumJS and Three.js viewers, complete with dynamic coordinate mapping and POI generation via an OpenAI `gpt-5-nano` powered Chatbot.
+- **Automated Housekeeping:** The system must scan for completed projects older than a specific threshold, archive their data to an external SFTP server, and purge local files to conserve disk space.
+
+#### Non-Functional Requirements
+- **Performance:** Background 3D tile generation must not block the main web thread; users should be able to navigate the portal without latency while models are processing.
+- **Scalability:** The architecture must decouple raw file storage from application logic, allowing for large Point Cloud data scaling.
+- **Security:** Access to processed 3D Viewer links must be restricted, preventing unauthenticated external users from accessing proprietary maps.
+
+#### System Constraints and Assumptions
+- **Storage Constraint:** The local server's disk space is finite and highly volatile during tile chunking. It is assumed the server has a large temporary NVMe/SSD allocated specifically for the `/public/models` directory.
+- **Coordinate Assumption:** Initial deployments assume a centralized GPS origin (e.g., `[0,0,0]` for Splats), requiring manual offset adjustments until dynamic georeferencing metadata is passed during upload.
+- **Dependencies Constraint:** The conversion pipeline strictly requires Node.js and the `npx 3dgs-ply-3dtiles-converter` library to be globally accessible by the background worker process.
+
+#### User Personas and Roles
+- **Data Providers / Users:** Drone operators, surveyors, and field engineers who capture raw point cloud data. They need a simple, visual portal to submit large URLs, track processing status, and access the final 3D maps to share with their stakeholders.
+- **Administrators / GIS Managers:** System operators who review raw submissions, execute the background processing scripts, verify the quality of the generated 3D tiles, and maintain the server's storage health via archiving.
 
 ### 2. Database Design
 The system uses a relational database (PostgreSQL/MySQL) with two primary tables:
@@ -242,7 +259,7 @@ The system uses a relational database (PostgreSQL/MySQL) with two primary tables
 
 ### 6. API Endpoints
 - `GET /api/map-data/{id}`: Returns JSON formatted location metadata and 3D Tile URLs for the Cesium Viewer.
-- `POST /user/chat`: Sends natural language queries to OpenAI (`gpt-4o-mini`) and returns structured `ViewerAPI` function calls (e.g., `showFloodRisk`, `showPOIs`).
+- `POST /user/chat`: Sends natural language queries to OpenAI (`gpt-5-nano`) and returns structured `ViewerAPI` function calls (e.g., `showFloodRisk`, `showPOIs`).
 - `POST /user/submissions/verify-link`: Validates Google Drive/OneDrive sharing permissions before allowing submission.
 
 ---
